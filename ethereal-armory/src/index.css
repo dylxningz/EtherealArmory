@@ -111,6 +111,23 @@ button {
   padding: 14px 26px;
   border-radius: 999px;
   border: none;
+
+  cursor: pointer; /* IMPORTANT */
+  transition: all 0.2s ease;
+}
+
+/* hover effect */
+.primary-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow:
+    0 0 12px rgba(192, 132, 252, 0.4),
+    0 0 24px rgba(124, 58, 237, 0.25);
+}
+
+/* click effect */
+.primary-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 0 10px rgba(192, 132, 252, 0.3);
 }
 
 .secondary-btn {
@@ -907,6 +924,8 @@ button {
 .contact-submit-btn {
   width: 100%;
   margin-top: 6px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
 }
 
 .contact-info-column {
