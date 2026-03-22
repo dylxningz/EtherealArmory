@@ -1,7 +1,7 @@
 export const siteSettings = {
   sitewideSale: {
     enabled: true,
-    percentOff: 15,
-    label: "15% Off Sitewide",
+    percentOff: 10,
+    label: "10% Off Sitewide",
   },
 };

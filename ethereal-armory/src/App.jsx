@@ -5,6 +5,7 @@ import ProductPage from "./pages/ProductPage";
 import ProductsPage from "./pages/ProductsPage";
 import "./index.css";
 import { Analytics } from "@vercel/analytics/react";
+import { siteSettings } from "./config/siteSettings";
 
 function SiteLayout() {
   const [cart, setCart] = useState(null);
@@ -45,6 +46,7 @@ function SiteLayout() {
 
   return (
     <div className="app">
+     
       <header className="navbar">
   <Link to="/" className="logo" onClick={() => setIsMenuOpen(false)}>
     Ethereal Armory
@@ -70,8 +72,10 @@ function SiteLayout() {
   <button className="cart-nav-btn" onClick={() => setIsCartOpen(true)}>
     Cart {cart?.totalQuantity ? `(${cart.totalQuantity})` : "(0)"}
   </button>
-</header>
 
+  
+</header>
+ <SaleBanner />
       <Outlet />
 
       {isCartOpen && (
@@ -148,6 +152,29 @@ function SiteLayout() {
     </div>
   );
 }
+
+function SaleBanner() {
+  const [visible, setVisible] = useState(true);
+  const sale = siteSettings?.sitewideSale;
+
+  if (!sale?.enabled || !visible) return null;
+
+  return (
+    <div className="sale-banner">
+      <p>{sale.label}</p>
+
+      <button
+        className="sale-banner-close"
+        onClick={() => setVisible(false)}
+        aria-label="Close banner"
+        type="button"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
 
 function HomePage() {
   return (
