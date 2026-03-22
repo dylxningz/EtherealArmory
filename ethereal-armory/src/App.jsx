@@ -373,16 +373,43 @@ function ContactPage() {
           <p className="section-eyebrow">Send a Message</p>
           <h2>Start your request</h2>
 
-          <form className="contact-form">
+          <form
+            className="contact-form"
+            action="https://formspree.io/f/mojkodab"
+            method="POST"
+          >
+            <input
+              type="hidden"
+              name="_subject"
+              value="New Ethereal Armory Contact Form Submission"
+            />
+            <input
+              type="hidden"
+              name="_next"
+              value="https://etherealarmory.com/contact"
+            />
+
             <div className="contact-field-row">
               <div className="contact-field">
                 <label htmlFor="name">Name</label>
-                <input type="text" id="name" placeholder="Your name" />
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  placeholder="Your name"
+                  required
+                />
               </div>
 
               <div className="contact-field">
                 <label htmlFor="email">Email</label>
-                <input type="email" id="email" placeholder="Your email" />
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  placeholder="Your email"
+                  required
+                />
               </div>
             </div>
 
@@ -391,7 +418,9 @@ function ContactPage() {
               <input
                 type="text"
                 id="subject"
+                name="subject"
                 placeholder="Custom order, question, collaboration..."
+                required
               />
             </div>
 
@@ -399,12 +428,18 @@ function ContactPage() {
               <label htmlFor="message">Message</label>
               <textarea
                 id="message"
+                name="message"
                 rows="7"
                 placeholder="Tell me about your idea, product question, inspiration, size, colors, deadline, or anything else helpful."
+                required
               ></textarea>
             </div>
 
-            <button type="submit" className="primary-btn contact-submit-btn">
+            <button
+              type="submit"
+              className="primary-btn contact-submit-btn"
+              style={{ position: "relative", zIndex: 20, pointerEvents: "auto" }}
+            >
               Send Inquiry
             </button>
           </form>
@@ -440,6 +475,12 @@ function ContactPage() {
             <p>
               Whether you’re ordering something custom or just asking about an
               existing piece, feel free to reach out and start the conversation.
+            </p>
+            <p>
+              Or email directly at{" "}
+              <a href="mailto:dylan@etherealarmory.com">
+                dylan@etherealarmory.com
+              </a>
             </p>
           </div>
         </div>
