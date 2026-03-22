@@ -8,6 +8,7 @@ import "./index.css";
 function SiteLayout() {
   const [cart, setCart] = useState(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     async function loadCart() {
@@ -44,20 +45,31 @@ function SiteLayout() {
   return (
     <div className="app">
       <header className="navbar">
-        <Link to="/" className="logo">Ethereal Armory</Link>
+  <Link to="/" className="logo" onClick={() => setIsMenuOpen(false)}>
+    Ethereal Armory
+  </Link>
 
-        <nav className="nav-links">
-          <Link to="/">Home</Link>
-          <Link to="/products">Products</Link>
-          <Link to="/about">About</Link>
-          <Link to="/contact">Contact</Link>
-          <Link to="/portfolio">Portfolio</Link>
-        </nav>
+  <button
+    className="menu-toggle"
+    onClick={() => setIsMenuOpen((prev) => !prev)}
+    aria-label="Toggle navigation menu"
+    aria-expanded={isMenuOpen}
+  >
+    ☰
+  </button>
 
-        <button className="cart-nav-btn" onClick={() => setIsCartOpen(true)}>
-          Cart {cart?.totalQuantity ? `(${cart.totalQuantity})` : "(0)"}
-        </button>
-      </header>
+  <nav className={`nav-links ${isMenuOpen ? "open" : ""}`}>
+    <Link to="/" onClick={() => setIsMenuOpen(false)}>Home</Link>
+    <Link to="/products" onClick={() => setIsMenuOpen(false)}>Products</Link>
+    <Link to="/about" onClick={() => setIsMenuOpen(false)}>About</Link>
+    <Link to="/contact" onClick={() => setIsMenuOpen(false)}>Contact</Link>
+    <Link to="/portfolio" onClick={() => setIsMenuOpen(false)}>Portfolio</Link>
+  </nav>
+
+  <button className="cart-nav-btn" onClick={() => setIsCartOpen(true)}>
+    Cart {cart?.totalQuantity ? `(${cart.totalQuantity})` : "(0)"}
+  </button>
+</header>
 
       <Outlet />
 

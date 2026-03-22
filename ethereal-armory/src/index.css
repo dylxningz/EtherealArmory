@@ -1144,3 +1144,46 @@ button {
     transform: translateY(10px);
   }
 }
+.menu-toggle {
+  display: none;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .menu-toggle {
+    display: block;
+    z-index: 1002;
+  }
+
+  .navbar {
+    position: relative;
+  }
+
+  .nav-links {
+    display: none;
+    position: absolute;
+    top: calc(100% + 12px);
+    left: 0;
+    right: 0;
+    background: #111;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 16px;
+    flex-direction: column;
+    gap: 14px;
+    z-index: 1001;
+  }
+
+  .nav-links.open {
+    display: flex;
+  }
+
+  .hero-visual {
+    display: none;
+  }
+}
