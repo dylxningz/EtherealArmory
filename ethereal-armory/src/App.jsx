@@ -4,6 +4,7 @@ import { getCart } from "./lib/shopify";
 import ProductPage from "./pages/ProductPage";
 import ProductsPage from "./pages/ProductsPage";
 import "./index.css";
+import { Analytics } from "@vercel/analytics/react";
 
 function SiteLayout() {
   const [cart, setCart] = useState(null);
@@ -517,6 +518,7 @@ export default function App() {
           <Route path="/portfolio" element={<PortfolioPage />} />
         </Route>
       </Routes>
+      <Analytics />
     </BrowserRouter>
   );
 }
