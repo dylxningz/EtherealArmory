@@ -506,8 +506,8 @@ function ContactPage() {
             </p>
             <p>
               Or email directly at{" "}
-              <a href="mailto:dylan@etherealarmory.com">
-                dylan@etherealarmory.com
+              <a href="mailto:dylangreene@etherealarmory.com">
+                dylangreene@etherealarmory.com
               </a>
             </p>
           </div>
