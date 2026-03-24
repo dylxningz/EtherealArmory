@@ -504,12 +504,23 @@ function ContactPage() {
               Whether you’re ordering something custom or just asking about an
               existing piece, feel free to reach out and start the conversation.
             </p>
-            <p>
-              Or email directly at{" "}
-              <a href="mailto:dylangreene@etherealarmory.com">
-                dylangreene@etherealarmory.com
-              </a>
-            </p>
+           <p>
+  Or reach out directly:
+</p>
+
+<p>
+  Email:{" "}
+  <a href="mailto:dylangreene@etherealarmory.com">
+    dylangreene@etherealarmory.com
+  </a>
+</p>
+
+<p>
+  Phone / Text:{" "}
+  <a href="tel:+17047621107">
+    (704) 762-1107
+  </a>
+</p>
           </div>
         </div>
       </section>
