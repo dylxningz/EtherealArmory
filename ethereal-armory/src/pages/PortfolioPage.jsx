@@ -1,5 +1,5 @@
 import { useState } from "react";
-import portfolioItems from "../data/portfoliodata";
+import portfolioItems from "../data/portfolioData";
 
 function PortfolioPage() {
   const [selectedItem, setSelectedItem] = useState(null);
