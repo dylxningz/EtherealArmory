@@ -1354,3 +1354,272 @@ html,
 body {
   overflow-x: hidden;
 }
+
+
+/* =========================================================
+   1. portoflio
+   ========================================================= */
+
+   .portfolio-page {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 110px 24px 60px;
+}
+
+.portfolio-hero {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.portfolio-intro {
+  max-width: 760px;
+  margin: 12px auto 0;
+  line-height: 1.7;
+  opacity: 0.82;
+}
+
+.portfolio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.portfolio-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.portfolio-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(200, 120, 255, 0.4);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.22);
+}
+
+.portfolio-card-image-wrap {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+}
+
+.portfolio-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.portfolio-card-content {
+  padding: 18px;
+}
+
+.portfolio-card-category {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 8px;
+  opacity: 0.8;
+}
+
+.portfolio-card-content h3 {
+  margin-bottom: 10px;
+}
+
+.portfolio-card-content p {
+  line-height: 1.6;
+  opacity: 0.82;
+}
+
+.portfolio-card-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.portfolio-tag {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.portfolio-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 8, 15, 0.84);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 20px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.portfolio-modal {
+  position: relative;
+  width: min(1100px, 100%);
+  background: #11121a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  padding: 28px;
+}
+
+.portfolio-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.portfolio-modal-header {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.portfolio-modal-cover {
+  width: 100%;
+  border-radius: 18px;
+  display: block;
+  object-fit: cover;
+}
+
+.portfolio-section-block {
+  margin-top: 32px;
+}
+
+.portfolio-section-block h3 {
+  margin-bottom: 16px;
+}
+
+.portfolio-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.portfolio-gallery img {
+  width: 100%;
+  border-radius: 16px;
+  display: block;
+}
+
+.portfolio-process-list {
+  padding-left: 20px;
+  line-height: 1.8;
+  opacity: 0.85;
+}
+
+@media (max-width: 900px) {
+  .portfolio-modal-header {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .portfolio-page {
+    padding: 90px 16px 50px;
+  }
+
+  .portfolio-modal {
+    padding: 20px;
+    border-radius: 18px;
+  }
+}
+
+.site-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 4rem;
+  padding: 2rem 1.25rem;
+}
+
+.site-footer-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.footer-brand {
+  margin: 0;
+  opacity: 0.8;
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.footer-links a {
+  text-decoration: none;
+  opacity: 0.9;
+}
+
+.footer-links a:hover {
+  opacity: 1;
+}
+
+.policy-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 4rem 1.25rem 5rem;
+}
+
+.policy-hero {
+  margin-bottom: 2rem;
+}
+
+.policy-intro {
+  max-width: 700px;
+  opacity: 0.9;
+}
+
+.policy-content {
+  display: grid;
+  gap: 1rem;
+}
+
+.policy-content h2 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.policy-content p {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.hero-logo-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 420px;
+  max-width: 90vw;
+  aspect-ratio: 1 / 1;
+  z-index: 2;
+}
+
+.hero-logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}

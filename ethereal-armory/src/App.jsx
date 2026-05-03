@@ -1,48 +1,84 @@
 import { BrowserRouter, Routes, Route, Link, Outlet } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { getCart } from "./lib/shopify";
+import { useCallback, useEffect, useState } from "react";
+import { clearStoredCartId, getCart } from "./lib/shopify";
 import ProductPage from "./pages/ProductPage";
 import ProductsPage from "./pages/ProductsPage";
 import "./index.css";
 import { Analytics } from "@vercel/analytics/react";
 import { siteSettings } from "./config/siteSettings";
+import PortfolioPage from "./pages/PortfolioPage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import TermsPage from "./pages/TermsPage";
+import ShippingPolicyPage from "./pages/ShippingPolicyPage";
+import ReturnsPolicyPage from "./pages/ReturnsPolicyPage";
+import MainLogo from "./assets/MAINLOGO.svg";
 
 function SiteLayout() {
   const [cart, setCart] = useState(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  const refreshCartFromStorage = useCallback(async (cartOverride) => {
+    if (cartOverride) {
+      setCart(cartOverride);
+      return cartOverride;
+    }
+
+    try {
+      const cartId = localStorage.getItem("cartId");
+
+      if (!cartId) {
+        setCart(null);
+        return null;
+      }
+
+      const cartData = await getCart(cartId);
+
+      if (!cartData) {
+        clearStoredCartId();
+        setCart(null);
+        return null;
+      }
+
+      setCart(cartData);
+      return cartData;
+    } catch (err) {
+      clearStoredCartId();
+      setCart(null);
+      console.error("Failed to refresh cart:", err);
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
+    let ignore = false;
+
     async function loadCart() {
       try {
-        const cartId = localStorage.getItem("cartId");
-        if (!cartId) return;
+        const cartData = await refreshCartFromStorage();
 
-        const cartData = await getCart(cartId);
-        setCart(cartData);
+        if (!ignore) {
+          setCart(cartData);
+        }
       } catch (err) {
-        console.error("Failed to load cart:", err);
+        if (!ignore) {
+          console.error("Failed to load cart:", err);
+        }
       }
     }
 
     loadCart();
 
-    window.loadCartFromStorage = async function () {
-      try {
-        const cartId = localStorage.getItem("cartId");
+    window.loadCartFromStorage = refreshCartFromStorage;
 
-        if (!cartId) {
-          setCart(null);
-          return;
-        }
+    return () => {
+      ignore = true;
 
-        const cartData = await getCart(cartId);
-        setCart(cartData);
-      } catch (err) {
-        console.error("Failed to refresh cart:", err);
+      if (window.loadCartFromStorage === refreshCartFromStorage) {
+        delete window.loadCartFromStorage;
       }
     };
-  }, []);
+  }, [refreshCartFromStorage]);
 
   return (
     <div className="app">
@@ -77,7 +113,20 @@ function SiteLayout() {
 </header>
  <SaleBanner />
       <Outlet />
+<footer className="site-footer">
+  <div className="site-footer-inner">
+    <p className="footer-brand">© {new Date().getFullYear()} Ethereal Armory</p>
 
+    <div className="footer-links">
+      <Link to="/about">About</Link>
+      <Link to="/contact">Contact</Link>
+      <Link to="/privacy-policy">Privacy Policy</Link>
+      <Link to="/terms-of-service">Terms of Service</Link>
+      <Link to="/shipping-policy">Shipping Policy</Link>
+      <Link to="/returns-policy">Returns & Refunds</Link>
+    </div>
+  </div>
+</footer>
       {isCartOpen && (
         <div className="cart-overlay" onClick={() => setIsCartOpen(false)}>
           <aside className="cart-drawer" onClick={(e) => e.stopPropagation()}>
@@ -153,6 +202,8 @@ function SiteLayout() {
   );
 }
 
+
+
 function SaleBanner() {
   const [visible, setVisible] = useState(true);
   const sale = siteSettings?.sitewideSale;
@@ -199,12 +250,16 @@ function HomePage() {
           </div>
         </div>
 
-        <div className="hero-visual">
-          <div className="hero-square-glow"></div>
-          <div className="hero-square">
-            <span className="hero-square-text">Ethereal Armory</span>
-          </div>
-        </div>
+<div className="hero-visual">
+  <div className="hero-square-glow"></div>
+  <div className="hero-logo-wrap">
+    <img
+      src={MainLogo}
+      alt="Ethereal Armory logo"
+      className="hero-logo-image"
+    />
+  </div>
+</div>
       </section>
 
       <section className="featured-home">
@@ -504,23 +559,12 @@ function ContactPage() {
               Whether you’re ordering something custom or just asking about an
               existing piece, feel free to reach out and start the conversation.
             </p>
-           <p>
-  Or reach out directly:
-</p>
-
-<p>
-  Email:{" "}
-  <a href="mailto:dylangreene@etherealarmory.com">
-    dylangreene@etherealarmory.com
-  </a>
-</p>
-
-<p>
-  Phone / Text:{" "}
-  <a href="tel:+17047621107">
-    (704) 762-1107
-  </a>
-</p>
+            <p>
+              Or email directly at{" "}
+              <a href="mailto:dylangreene@etherealarmory.com">
+                dylangreene@etherealarmory.com
+              </a>
+            </p>
           </div>
         </div>
       </section>
@@ -528,20 +572,7 @@ function ContactPage() {
   );
 }
 
-function PortfolioPage() {
-  return (
-    <main className="basic-page">
-      <div className="wip-box">
-        <p className="section-eyebrow">Portfolio</p>
-        <h1>Work in Progress</h1>
-        <p>
-          This section is currently being built and will soon showcase finished
-          props, custom pieces, and featured projects from Ethereal Armory.
-        </p>
-      </div>
-    </main>
-  );
-}
+
 
 export default function App() {
   return (
@@ -554,6 +585,10 @@ export default function App() {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/portfolio" element={<PortfolioPage />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+<Route path="/terms-of-service" element={<TermsPage />} />
+<Route path="/shipping-policy" element={<ShippingPolicyPage />} />
+<Route path="/returns-policy" element={<ReturnsPolicyPage />} />
         </Route>
       </Routes>
       <Analytics />

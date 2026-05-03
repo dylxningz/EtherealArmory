@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
-  addToCart,
-  createCart,
+  addToCartWithRecovery,
   createCartAndGetCheckoutUrl,
   getProductByHandle,
 } from "../lib/shopify";
@@ -27,6 +26,16 @@ function buildVariantMap(variants) {
   return map;
 }
 
+function getFriendlyCartError(error, fallback) {
+  const message = error?.message || "";
+
+  if (/available|sold out|quantity|inventory/i.test(message)) {
+    return message;
+  }
+
+  return fallback;
+}
+
 export default function ProductPage() {
   const { handle } = useParams();
 
@@ -38,6 +47,7 @@ export default function ProductPage() {
   const [adding, setAdding] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [error, setError] = useState("");
+  const [cartError, setCartError] = useState("");
 
   useEffect(() => {
     let ignore = false;
@@ -153,26 +163,24 @@ export default function ProductPage() {
 
     try {
       setAdding(true);
+      setCartError("");
 
-      let cartId = localStorage.getItem("cartId");
+      const result = await addToCartWithRecovery(selectedVariant.id);
 
-      if (!cartId) {
-        const newCart = await createCart();
-        cartId = newCart.id;
-        localStorage.setItem("cartId", cartId);
-      }
-
-      await addToCart(cartId, selectedVariant.id);
-
-      if (window.loadCartFromStorage) {
-        await window.loadCartFromStorage();
+      if (typeof window.loadCartFromStorage === "function") {
+        await window.loadCartFromStorage(result.cart);
       }
 
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
     } catch (err) {
       console.error(err);
-      alert(err.message || "Failed to add to cart.");
+      setCartError(
+        getFriendlyCartError(
+          err,
+          "We could not add this item to your cart. Please try again."
+        )
+      );
     } finally {
       setAdding(false);
     }
@@ -183,10 +191,17 @@ export default function ProductPage() {
 
     try {
       setBuying(true);
+      setCartError("");
       const checkoutUrl = await createCartAndGetCheckoutUrl(selectedVariant.id);
       window.location.href = checkoutUrl;
     } catch (err) {
-      alert(err.message || "Could not start checkout.");
+      console.error(err);
+      setCartError(
+        getFriendlyCartError(
+          err,
+          "We could not start checkout. Please try again."
+        )
+      );
     } finally {
       setBuying(false);
     }
@@ -309,6 +324,8 @@ export default function ProductPage() {
             {buying ? "Redirecting..." : "Buy Now"}
           </button>
         </div>
+
+        {cartError && <p className="product-cart-error">{cartError}</p>}
       </div>
       {showToast && (
   <div className="toast">

@@ -3,6 +3,57 @@ const STOREFRONT_TOKEN = import.meta.env.VITE_SHOPIFY_STOREFRONT_TOKEN;
 const API_VERSION = import.meta.env.VITE_SHOPIFY_API_VERSION || "2025-10";
 
 const endpoint = `https://${SHOP_DOMAIN}/api/${API_VERSION}/graphql.json`;
+const CART_STORAGE_KEY = "cartId";
+
+class CartUnavailableError extends Error {
+  constructor(message = "Your saved cart is no longer available.") {
+    super(message);
+    this.name = "CartUnavailableError";
+  }
+}
+
+function getStoredCartId() {
+  try {
+    return localStorage.getItem(CART_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function storeCartId(cartId) {
+  try {
+    if (cartId) {
+      localStorage.setItem(CART_STORAGE_KEY, cartId);
+    }
+  } catch {
+    // Cart recovery still works for this request even when storage is blocked.
+  }
+}
+
+export function clearStoredCartId() {
+  try {
+    localStorage.removeItem(CART_STORAGE_KEY);
+  } catch {
+    // Ignore storage failures; callers will continue with in-memory state.
+  }
+}
+
+function getUserErrorMessage(userErrors) {
+  return userErrors?.[0]?.message || "Shopify could not complete the request.";
+}
+
+function isCartUnavailableMessage(message = "") {
+  return /cart.*(not found|does not exist|expired|invalid|completed|could not be found)|invalid.*cart|invalid global id/i.test(
+    message
+  );
+}
+
+function isCartUnavailableError(error) {
+  return (
+    error instanceof CartUnavailableError ||
+    isCartUnavailableMessage(error?.message)
+  );
+}
 
 async function shopifyFetch(query, variables = {}) {
   const response = await fetch(endpoint, {
@@ -151,6 +202,10 @@ const CART_CREATE_MUTATION = `
         checkoutUrl
         totalQuantity
       }
+      userErrors {
+        field
+        message
+      }
     }
   }
 `;
@@ -165,6 +220,36 @@ const CART_ADD_MUTATION = `
         id
         checkoutUrl
         totalQuantity
+        lines(first: 50) {
+          nodes {
+            id
+            quantity
+            merchandise {
+              ... on ProductVariant {
+                id
+                title
+                image {
+                  url
+                  altText
+                }
+                product {
+                  title
+                  handle
+                }
+                price {
+                  amount
+                  currencyCode
+                }
+              }
+            }
+          }
+        }
+        cost {
+          subtotalAmount {
+            amount
+            currencyCode
+          }
+        }
       }
       userErrors {
         field
@@ -260,25 +345,107 @@ export async function getCollectionProducts(handle, first = 40) {
 
 export async function createCart() {
   const data = await shopifyFetch(CART_CREATE_MUTATION);
+  const userErrors = data.cartCreate.userErrors;
+
+  if (userErrors?.length) {
+    throw new Error(getUserErrorMessage(userErrors));
+  }
+
+  if (!data.cartCreate.cart?.id) {
+    throw new Error("Could not create a new cart. Please try again.");
+  }
+
   return data.cartCreate.cart;
 }
 
 export async function addToCart(cartId, merchandiseId) {
+  if (!cartId) {
+    throw new CartUnavailableError("Your cart could not be found.");
+  }
+
   const data = await shopifyFetch(CART_ADD_MUTATION, {
     cartId,
     merchandiseId,
   });
 
   if (data.cartLinesAdd.userErrors?.length) {
-    throw new Error(data.cartLinesAdd.userErrors[0].message);
+    const message = getUserErrorMessage(data.cartLinesAdd.userErrors);
+
+    if (isCartUnavailableMessage(message)) {
+      throw new CartUnavailableError(message);
+    }
+
+    throw new Error(message);
+  }
+
+  if (!data.cartLinesAdd.cart?.id) {
+    throw new CartUnavailableError();
   }
 
   return data.cartLinesAdd.cart;
 }
 
 export async function getCart(cartId) {
-  const data = await shopifyFetch(GET_CART_QUERY, { cartId });
-  return data.cart;
+  if (!cartId) return null;
+
+  try {
+    const data = await shopifyFetch(GET_CART_QUERY, { cartId });
+    return data.cart || null;
+  } catch (error) {
+    if (isCartUnavailableError(error)) {
+      clearStoredCartId();
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+export async function getOrCreateCart() {
+  const storedCartId = getStoredCartId();
+
+  if (storedCartId) {
+    const cart = await getCart(storedCartId);
+
+    if (cart?.id) {
+      return cart;
+    }
+
+    clearStoredCartId();
+  }
+
+  const newCart = await createCart();
+  storeCartId(newCart.id);
+  return newCart;
+}
+
+export async function addToCartWithRecovery(merchandiseId) {
+  try {
+    const cart = await getOrCreateCart();
+    const updatedCart = await addToCart(cart.id, merchandiseId);
+    storeCartId(updatedCart.id);
+
+    return {
+      cart: updatedCart,
+      recovered: false,
+    };
+  } catch (error) {
+    if (!isCartUnavailableError(error)) {
+      throw error;
+    }
+  }
+
+  clearStoredCartId();
+
+  const freshCart = await createCart();
+  storeCartId(freshCart.id);
+  const updatedCart = await addToCart(freshCart.id, merchandiseId);
+  storeCartId(updatedCart.id);
+
+  return {
+    cart: updatedCart,
+    recovered: true,
+  };
 }
 
 export async function createCartAndGetCheckoutUrl(merchandiseId) {
@@ -287,8 +454,14 @@ export async function createCartAndGetCheckoutUrl(merchandiseId) {
   });
 
   if (data.cartCreate.userErrors?.length) {
-    throw new Error(data.cartCreate.userErrors[0].message);
+    throw new Error(getUserErrorMessage(data.cartCreate.userErrors));
   }
 
-  return data.cartCreate.cart.checkoutUrl;
+  const checkoutUrl = data.cartCreate.cart?.checkoutUrl;
+
+  if (!checkoutUrl) {
+    throw new Error("Could not start checkout. Please try again.");
+  }
+
+  return checkoutUrl;
 }

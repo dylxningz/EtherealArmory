@@ -235,6 +235,13 @@
   cursor: not-allowed;
 }
 
+.product-cart-error {
+  margin-top: -8px;
+  color: #fecaca;
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
 /* =========================================================
    RESPONSIVE
    ========================================================= */
