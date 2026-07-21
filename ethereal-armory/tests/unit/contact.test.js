@@ -82,8 +82,8 @@ test("valid contact submissions send to the studio with the customer as reply-to
   const { handler, calls } = createHarness();
   const response = await invoke(handler, createRequest(validSubmission));
 
-  assert.equal(response.statusCode, 202);
-  assert.deepEqual(response.body, { ok: true, accepted: true, id: "email_accepted_123" });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.body, { success: true });
   assert.equal(calls.length, 1);
   assert.deepEqual(calls[0].payload.to, ["dylangreene@etherealarmory.com"]);
   assert.equal(calls[0].payload.from, configuredEnvironment.CONTACT_FROM_EMAIL);
@@ -101,7 +101,7 @@ test("missing required contact fields are rejected without sending", async () =>
     const { handler, calls } = createHarness();
     const response = await invoke(handler, createRequest({ ...validSubmission, [missingField]: "" }));
     assert.equal(response.statusCode, 422);
-    assert.equal(response.body.ok, false);
+    assert.equal(response.body.success, false);
     assert.equal(calls.length, 0);
   }
 });
@@ -110,7 +110,7 @@ test("malformed customer email addresses are rejected", async () => {
   const { handler, calls } = createHarness();
   const response = await invoke(handler, createRequest({ ...validSubmission, email: "not-an-email" }));
   assert.equal(response.statusCode, 422);
-  assert.match(response.body.message, /valid email/i);
+  assert.match(response.body.error, /valid email/i);
   assert.equal(calls.length, 0);
 });
 
@@ -125,16 +125,21 @@ test("Resend rejection returns an error instead of a false success", async () =>
   const { handler, calls } = createHarness({ sendResult: { data: null, error: { message: "Provider rejected request" } } });
   const response = await invoke(handler, createRequest(validSubmission));
   assert.equal(response.statusCode, 502);
-  assert.equal(response.body.ok, false);
-  assert.doesNotMatch(response.body.message, /Provider rejected request/);
+  assert.deepEqual(response.body, {
+    success: false,
+    error: "The inquiry could not be sent. Please retry or email dylangreene@etherealarmory.com directly.",
+  });
   assert.equal(calls.length, 1);
 });
 
-test("missing server-side email configuration fails clearly without sending", async () => {
+test("missing server-side email configuration fails generically without sending", async () => {
   const { handler, calls } = createHarness({ environment: { RESEND_API_KEY: "re_test_placeholder" } });
   const response = await invoke(handler, createRequest(validSubmission));
   assert.equal(response.statusCode, 503);
-  assert.match(response.body.message, /not configured/i);
+  assert.deepEqual(response.body, {
+    success: false,
+    error: "The inquiry could not be sent. Please retry or email dylangreene@etherealarmory.com directly.",
+  });
   assert.equal(calls.length, 0);
 });
 
@@ -142,6 +147,7 @@ test("unsupported methods are rejected with an Allow header", async () => {
   const { handler, calls } = createHarness();
   const response = await invoke(handler, { method: "GET", headers: {} });
   assert.equal(response.statusCode, 405);
+  assert.deepEqual(response.body, { success: false, error: "Method not allowed." });
   assert.equal(response.headers.Allow, "POST");
   assert.equal(calls.length, 0);
 });

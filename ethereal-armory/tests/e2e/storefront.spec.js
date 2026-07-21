@@ -643,7 +643,7 @@ test("contact form reports accepted email delivery, resets fields, and focuses s
   await page.route("**/api/contact", async (route) => {
     submittedPayload = route.request().postDataJSON();
     await new Promise((resolve) => setTimeout(resolve, 100));
-    return route.fulfill({ status: 202, json: { ok: true, accepted: true, id: "email_test_123" } });
+    return route.fulfill({ status: 200, json: { success: true } });
   });
   await page.goto("/contact");
   await page.getByLabel("Name").fill("Preview Reviewer");
@@ -671,7 +671,10 @@ test("contact form reports accepted email delivery, resets fields, and focuses s
 
 test("contact form preserves values and never shows success when email delivery fails", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "390px", "Form failure behavior is viewport-independent.");
-  await page.route("**/api/contact", (route) => route.fulfill({ status: 502, json: { ok: false, message: "The inquiry could not be sent." } }));
+  await page.route("**/api/contact", (route) => route.fulfill({
+    status: 502,
+    json: { success: false, error: "The inquiry could not be sent. Please retry or email dylangreene@etherealarmory.com directly." },
+  }));
   await page.goto("/contact");
   await page.getByLabel("Name").fill("Failure State Reviewer");
   await page.getByLabel("Email").fill("failure@example.com");
@@ -695,7 +698,7 @@ test("contact form prevents repeated submit events from creating duplicate reque
   await page.route("**/api/contact", async (route) => {
     requestCount += 1;
     await requestGate;
-    return route.fulfill({ status: 202, json: { ok: true, accepted: true, id: "email_test_once" } });
+    return route.fulfill({ status: 200, json: { success: true } });
   });
   await page.goto("/contact");
   await page.getByLabel("Name").fill("Duplicate Reviewer");

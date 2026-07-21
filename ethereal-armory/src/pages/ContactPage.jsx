@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Seo from "../components/Seo";
 
 const endpoint = "/api/contact";
+const deliveryError = "The inquiry could not be sent. Please retry or email dylangreene@etherealarmory.com directly.";
 
 function createSubmissionId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
@@ -34,6 +35,7 @@ export default function ContactPage() {
     submittingRef.current = true;
     setStatus("submitting");
     setMessage("Sending your inquiry securely…");
+    let failureMessage = deliveryError;
     try {
       const response = await fetch(endpoint, {
         method: "POST",
@@ -41,16 +43,17 @@ export default function ContactPage() {
         body: JSON.stringify(payload),
       });
       const result = await response.json().catch(() => null);
-      if (!response.ok || !result?.ok || !result?.accepted) {
-        throw new Error(result?.message || "The inquiry could not be sent.");
+      if (!response.ok || !result?.success) {
+        failureMessage = result?.error || deliveryError;
+        throw new Error("Submission failed.");
       }
 
       form.reset();
       setStatus("success");
       setMessage("Your inquiry has been sent. The studio will respond after reviewing the project details.");
-    } catch (error) {
+    } catch {
       setStatus("error");
-      setMessage(`${error.message || "Your inquiry was not sent."} Please retry or email dylangreene@etherealarmory.com directly.`);
+      setMessage(failureMessage);
     } finally {
       submittingRef.current = false;
     }

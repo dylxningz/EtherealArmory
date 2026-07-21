@@ -2,6 +2,7 @@ import { Resend } from "resend";
 
 const DEFAULT_TO_EMAIL = "dylangreene@etherealarmory.com";
 const MAX_PAYLOAD_BYTES = 32 * 1024;
+const DELIVERY_ERROR = "The inquiry could not be sent. Please retry or email dylangreene@etherealarmory.com directly.";
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const SUBMISSION_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9/_-]{7,127}$/;
 
@@ -138,38 +139,6 @@ function json(response, status, body) {
   return response.status(status).json(body);
 }
 
-function sanitizeProviderDiagnostic(value, sensitiveValues) {
-  if (value === null || value === undefined || typeof value === "number" || typeof value === "boolean") return value ?? null;
-  if (Array.isArray(value)) return value.map((item) => sanitizeProviderDiagnostic(item, sensitiveValues));
-  if (typeof value === "object") {
-    return Object.fromEntries(Object.entries(value)
-      .filter(([key]) => !/authorization|api.?key|reply.?to|customer|html|text|phone/i.test(key))
-      .map(([key, item]) => [key, sanitizeProviderDiagnostic(item, sensitiveValues)]));
-  }
-
-  let sanitized = String(value)
-    .replace(/Bearer\s+\S+/gi, "[redacted-authorization]")
-    .replace(/\bre_[a-zA-Z0-9_-]+\b/g, "[redacted-api-key]")
-    .replace(/[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+/g, "[redacted-email]");
-  for (const sensitiveValue of sensitiveValues) {
-    if (sensitiveValue.length >= 3) sanitized = sanitized.replaceAll(sensitiveValue, "[redacted-submission-value]");
-  }
-  return sanitized;
-}
-
-function getProviderDiagnostics(error, submission, apiKey) {
-  const providerError = error && typeof error === "object" ? error : {};
-  const sensitiveValues = [apiKey, ...Object.values(submission)]
-    .filter((value) => typeof value === "string" && value);
-  return {
-    name: sanitizeProviderDiagnostic(providerError.name ?? null, sensitiveValues),
-    message: sanitizeProviderDiagnostic(providerError.message ?? "Resend returned no error message.", sensitiveValues),
-    statusCode: providerError.statusCode ?? null,
-    code: sanitizeProviderDiagnostic(providerError.code ?? null, sensitiveValues),
-    rawResponseBody: error ? sanitizeProviderDiagnostic(error, sensitiveValues) : null,
-  };
-}
-
 export function createContactHandler({
   createResendClient = (apiKey) => new Resend(apiKey),
   getEnvironment = () => process.env,
@@ -179,12 +148,12 @@ export function createContactHandler({
   return async function contactHandler(request, response) {
     if (request.method !== "POST") {
       response.setHeader("Allow", "POST");
-      return json(response, 405, { ok: false, message: "Method not allowed." });
+      return json(response, 405, { success: false, error: "Method not allowed." });
     }
 
     const contentType = request.headers?.["content-type"] || "";
     if (!contentType.toLowerCase().startsWith("application/json")) {
-      return json(response, 415, { ok: false, message: "Submit the inquiry as JSON." });
+      return json(response, 415, { success: false, error: "Submit the inquiry as JSON." });
     }
 
     try {
@@ -195,7 +164,7 @@ export function createContactHandler({
       const to = environment.CONTACT_TO_EMAIL || DEFAULT_TO_EMAIL;
       if (!apiKey || !from || !EMAIL_PATTERN.test(to)) {
         logger.error("Contact email delivery is not configured.");
-        return json(response, 503, { ok: false, message: "Email delivery is not configured." });
+        return json(response, 503, { success: false, error: DELIVERY_ERROR });
       }
 
       const timestamp = now().toISOString();
@@ -213,26 +182,17 @@ export function createContactHandler({
       });
 
       if (error || !data?.id) {
-        const diagnostics = getProviderDiagnostics(error, submission, apiKey);
-        logger.error("Contact email provider rejected the submission.", diagnostics);
-        if (environment.VERCEL_ENV === "preview") {
-          return json(response, 502, {
-            success: false,
-            provider: "resend",
-            providerCode: String(error?.code || error?.name || error?.statusCode || "unknown_error"),
-            providerMessage: String(error?.message || "Resend returned no error message."),
-          });
-        }
-        return json(response, 502, { ok: false, message: "The inquiry could not be sent." });
+        logger.error("Contact email provider rejected the submission.");
+        return json(response, 502, { success: false, error: DELIVERY_ERROR });
       }
 
-      return json(response, 202, { ok: true, accepted: true, id: data.id });
+      return json(response, 200, { success: true });
     } catch (error) {
       if (error instanceof ContactRequestError) {
-        return json(response, error.status, { ok: false, message: error.message });
+        return json(response, error.status, { success: false, error: error.message });
       }
       logger.error("Contact email delivery failed unexpectedly.");
-      return json(response, 500, { ok: false, message: "The inquiry could not be sent." });
+      return json(response, 500, { success: false, error: DELIVERY_ERROR });
     }
   };
 }
