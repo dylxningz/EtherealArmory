@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { ThemeLink as Link } from "../components/ThemeLinks";
 import Seo, { SITE_URL } from "../components/Seo";
 import ProductCard from "../components/ProductCard";
 import JudgeMeReviews from "../components/JudgeMeReviews";

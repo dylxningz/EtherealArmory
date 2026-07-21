@@ -179,9 +179,13 @@ const COLLECTIONS_QUERY = `
     collections(first: $first, after: $after, sortKey: UPDATED_AT, reverse: true) {
       nodes {
         id handle title description
-        image { url altText width height }
-        products(first: 4) {
-          nodes { id title featuredImage { url altText width height } }
+        image { id url altText width height }
+        products(first: 6) {
+          nodes {
+            id title
+            featuredImage { id url altText width height }
+            images(first: 3) { nodes { id url altText width height } }
+          }
         }
       }
       pageInfo { hasNextPage endCursor }

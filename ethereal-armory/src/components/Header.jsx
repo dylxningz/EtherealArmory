@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link, NavLink } from "react-router-dom";
+import { ThemeLink as Link, ThemeNavLink as NavLink } from "./ThemeLinks";
 import { useCart } from "../context/useCart";
 import { useModalDialog } from "../hooks/useModalDialog";
 

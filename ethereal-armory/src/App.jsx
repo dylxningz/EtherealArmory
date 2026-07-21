@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
 import SiteLayout from "./components/SiteLayout";
 import "./index.css";
+import "./themes.css";
 
 const HomePage = lazy(() => import("./pages/HomePage"));
 const ProductsPage = lazy(() => import("./pages/ProductsPage"));
@@ -10,6 +11,7 @@ const ProductPage = lazy(() => import("./pages/ProductPage"));
 const AboutPage = lazy(() => import("./pages/AboutPage"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
 const PortfolioPage = lazy(() => import("./pages/PortfolioPage"));
+const ReviewsPage = lazy(() => import("./pages/ReviewsPage"));
 const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
 const TermsPage = lazy(() => import("./pages/TermsPage"));
 const ShippingPolicyPage = lazy(() => import("./pages/ShippingPolicyPage"));
@@ -34,6 +36,7 @@ export default function App() {
               <Route path="about" element={<AboutPage />} />
               <Route path="contact" element={<ContactPage />} />
               <Route path="portfolio" element={<PortfolioPage />} />
+              <Route path="reviews" element={<ReviewsPage />} />
               <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
               <Route path="terms-of-service" element={<TermsPage />} />
               <Route path="shipping-policy" element={<ShippingPolicyPage />} />

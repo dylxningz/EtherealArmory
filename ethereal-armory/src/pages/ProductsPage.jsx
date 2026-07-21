@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
+import { ThemeLink as Link } from "../components/ThemeLinks";
 import Seo, { SITE_URL } from "../components/Seo";
 import ProductCard from "../components/ProductCard";
 import CollectionArtwork from "../components/CollectionArtwork";
 import { EmptyState, ErrorState, LoadingGrid } from "../components/AsyncState";
 import { getCollectionProductsPage, getCollectionsPage, getProductsPage } from "../lib/shopify";
 import { getCatalogState, sortProducts, updateCatalogState } from "../lib/commerce";
+import { selectCollectionArtworks } from "../lib/collectionArtwork";
 import "./ProductsPage.css";
 
 const sortOptions = {
@@ -54,6 +56,7 @@ export default function ProductsPage() {
   }, [catalogState.sort, handle, retryKey]);
 
   const productTypes = useMemo(() => [...new Set(catalog.products.map((product) => product.productType).filter(Boolean))].sort(), [catalog.products]);
+  const collectionArtworks = useMemo(() => selectCollectionArtworks(collections), [collections]);
   const filteredProducts = useMemo(() => {
     const filtered = catalog.products.filter((product) => {
       if (catalogState.type !== "all" && product.productType !== catalogState.type) return false;
@@ -67,6 +70,11 @@ export default function ProductsPage() {
   const setFilter = useCallback((changes) => {
     if (changes.sort) setStatus("loading");
     setSearchParams(updateCatalogState(searchParams, changes), { replace: false });
+  }, [searchParams, setSearchParams]);
+  const clearFilters = useCallback(() => {
+    const next = new URLSearchParams();
+    if (searchParams.get("theme") === "cyberpunk") next.set("theme", "cyberpunk");
+    setSearchParams(next);
   }, [searchParams, setSearchParams]);
 
   async function loadMore() {
@@ -114,7 +122,7 @@ export default function ProductsPage() {
         <div className="collection-rail-heading"><h2>Collections</h2><div><button className="icon-button" onClick={() => carouselRef.current?.scrollBy({ left: -360, behavior: "smooth" })} aria-label="Previous collections" type="button">←</button><button className="icon-button" onClick={() => carouselRef.current?.scrollBy({ left: 360, behavior: "smooth" })} aria-label="Next collections" type="button">→</button></div></div>
         <div className="collection-rail" ref={carouselRef}>
           <Link className={!handle ? "active" : ""} to="/products"><span className="collection-artwork-frame is-compact"><span className="collection-artwork-fallback is-compact" aria-hidden="true"><img src="/brand-mark.svg" alt="" width="96" height="96" /></span></span><strong>All products</strong></Link>
-          {collections.map((collection) => <Link className={handle === collection.handle ? "active" : ""} to={`/collections/${collection.handle}`} key={collection.id}><CollectionArtwork collection={collection} compact sizes="(max-width: 650px) 132px, 168px" /><strong>{collection.title}</strong></Link>)}
+          {collections.map((collection) => <Link className={handle === collection.handle ? "active" : ""} to={`/collections/${collection.handle}`} key={collection.id}><CollectionArtwork collection={collection} artwork={collectionArtworks.get(collection.id)} compact sizes="(max-width: 650px) 132px, 168px" /><strong>{collection.title}</strong></Link>)}
         </div>
       </section>
 
@@ -125,7 +133,7 @@ export default function ProductsPage() {
             <label>Product type<select value={catalogState.type} onChange={(event) => setFilter({ type: event.target.value })}><option value="all">All types</option>{productTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
             <label>Availability<select value={catalogState.availability} onChange={(event) => setFilter({ availability: event.target.value })}><option value="all">Any availability</option><option value="available">Available</option><option value="sold-out">Sold out</option></select></label>
             <label>Sort by<select value={catalogState.sort} onChange={(event) => setFilter({ sort: event.target.value })}><option value="featured">Featured</option><option value="title-asc">Title: A–Z</option><option value="title-desc">Title: Z–A</option><option value="price-low-high">Price: low to high</option><option value="price-high-low">Price: high to low</option></select></label>
-            {(catalogState.type !== "all" || catalogState.availability !== "all" || catalogState.sort !== "featured") && <button className="text-button clear-filters" onClick={() => setSearchParams(new URLSearchParams())} type="button">Clear filters</button>}
+            {(catalogState.type !== "all" || catalogState.availability !== "all" || catalogState.sort !== "featured") && <button className="text-button clear-filters" onClick={clearFilters} type="button">Clear filters</button>}
           </div>
         </details>
 
@@ -135,7 +143,7 @@ export default function ProductsPage() {
             ? <LoadingGrid />
             : filteredProducts.length
               ? <div className="product-grid">{filteredProducts.map((product, index) => <ProductCard product={product} eager={index < 4} key={product.id} />)}</div>
-              : <EmptyState title="No products match these filters" message="Clear one or more filters, or explore another collection." action={<button className="button button-secondary" onClick={() => setSearchParams(new URLSearchParams())} type="button">Clear filters</button>} />}
+              : <EmptyState title="No products match these filters" message="Clear one or more filters, or explore another collection." action={<button className="button button-secondary" onClick={clearFilters} type="button">Clear filters</button>} />}
 
         {catalog.pageInfo?.hasNextPage && status !== "loading" && <div className="load-more"><p>Showing {catalog.products.length}+ products</p><button className="button button-secondary" onClick={loadMore} disabled={loadingMore} type="button">{loadingMore ? "Loading more…" : "Load more products"}</button></div>}
         {status === "load-more-error" && <div className="inline-error" role="alert"><p>More products could not be loaded. The products above are still available.</p><button className="text-button" onClick={loadMore} type="button">Try again</button></div>}

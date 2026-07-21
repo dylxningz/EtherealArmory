@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { ThemeLink as Link } from "./ThemeLinks";
 import { formatMoney, getSalePricing } from "../lib/pricing";
 import { shopifyImageUrl, shopifySrcSet } from "../lib/images";
 

@@ -1,15 +1,30 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { ThemeLink as Link } from "../components/ThemeLinks";
 import Seo, { SITE_URL } from "../components/Seo";
 import ProductCard from "../components/ProductCard";
 import CollectionArtwork from "../components/CollectionArtwork";
 import { ErrorState, LoadingGrid } from "../components/AsyncState";
 import { getCollectionsPage, getProductsPage } from "../lib/shopify";
+import { selectCollectionArtworks } from "../lib/collectionArtwork";
 
 const ArcaneArtifact = lazy(() => import("../components/ArcaneArtifact"));
 
 function ArtifactFallback() {
-  return <div className="artifact-stage artifact-static" role="img" aria-label="A voidglass reliquary surrounded by arcane rings"><span className="artifact-static-relic" aria-hidden="true" /></div>;
+  return <div className="artifact-stage artifact-static" role="img" aria-label="A dimensional Voidglass Reliquary surrounded by arcane rings"><span className="artifact-static-ring" aria-hidden="true" /><span className="artifact-static-relic" aria-hidden="true" /><span className="artifact-static-highlight" aria-hidden="true" /></div>;
+}
+
+class ArtifactErrorBoundary extends Component {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch() {}
+
+  render() {
+    return this.state.failed ? <ArtifactFallback /> : this.props.children;
+  }
 }
 
 const trustSignals = [
@@ -52,6 +67,7 @@ export default function HomePage() {
     { "@context": "https://schema.org", "@type": "Organization", name: "Ethereal Armory", url: SITE_URL, logo: `${SITE_URL}/brand-mark.svg`, email: "dylangreene@etherealarmory.com" },
     { "@context": "https://schema.org", "@type": "WebSite", name: "Ethereal Armory", url: SITE_URL },
   ], []);
+  const collectionArtworks = useMemo(() => selectCollectionArtworks(data.collections.slice(0, 3)), [data.collections]);
 
   return (
     <main id="main-content">
@@ -68,7 +84,7 @@ export default function HomePage() {
           <p className="hero-note">Independent craft studio · Secure Shopify checkout</p>
         </div>
         <div className="hero-art">
-          <Suspense fallback={<ArtifactFallback />}><ArcaneArtifact /></Suspense>
+          <ArtifactErrorBoundary><Suspense fallback={<ArtifactFallback />}><ArcaneArtifact /></Suspense></ArtifactErrorBoundary>
           <p><span>Original artifact</span><strong>Voidglass reliquary</strong></p>
         </div>
       </section>
@@ -84,7 +100,7 @@ export default function HomePage() {
             {status === "loading" ? Array.from({ length: 3 }, (_, index) => <div className="collection-card skeleton-card" key={index}><span className="skeleton-media" /></div>) : data.collections.slice(0, 3).map((collection) => (
               <Link className="collection-card" to={`/collections/${collection.handle}`} key={collection.id}>
                 <div className="collection-card-media">
-                  <CollectionArtwork collection={collection} sizes="(max-width: 768px) 92vw, 31vw" />
+                  <CollectionArtwork collection={collection} artwork={collectionArtworks.get(collection.id)} sizes="(max-width: 768px) 92vw, 31vw" />
                 </div>
                 <div><p className="overline">Collection</p><h3>{collection.title}</h3><span className="text-link">Explore collection <span aria-hidden="true">→</span></span></div>
               </Link>

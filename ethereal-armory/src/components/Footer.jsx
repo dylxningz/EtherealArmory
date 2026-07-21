@@ -1,6 +1,6 @@
-import { Link } from "react-router-dom";
+import { ThemeLink as Link } from "./ThemeLinks";
 
-const shopLinks = [["/products", "Shop all"], ["/portfolio", "Portfolio"], ["/contact", "Custom builds"]];
+const shopLinks = [["/products", "Shop all"], ["/portfolio", "Portfolio"], ["/reviews", "Reviews"], ["/contact", "Custom builds"]];
 const policyLinks = [["/shipping-policy", "Shipping"], ["/returns-policy", "Returns"], ["/privacy-policy", "Privacy"], ["/terms-of-service", "Terms"]];
 
 export default function Footer() {

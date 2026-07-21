@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { ThemeLink as Link } from "./ThemeLinks";
 import { useCart } from "../context/useCart";
 import { useModalDialog } from "../hooks/useModalDialog";
 import { formatMoney } from "../lib/pricing";

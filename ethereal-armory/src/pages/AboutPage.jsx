@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { ThemeLink as Link } from "../components/ThemeLinks";
 import Seo from "../components/Seo";
 
 export default function AboutPage() {
