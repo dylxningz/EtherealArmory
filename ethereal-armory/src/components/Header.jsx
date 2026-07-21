@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, NavLink } from "react-router-dom";
 import { useCart } from "../context/useCart";
 import { useModalDialog } from "../hooks/useModalDialog";
@@ -32,11 +33,11 @@ export default function Header() {
     open: menuOpen,
     containerRef: menuRef,
     onClose: closeMenu,
-    inertSelector: "main, footer, .announcement-banner, .cart-layer",
+    inertSelector: ".site-header, main, footer, .announcement-banner, .cart-layer",
   });
 
   useEffect(() => {
-    const media = window.matchMedia("(min-width: 769px)");
+    const media = window.matchMedia("(min-width: 901px)");
     const handleChange = (event) => event.matches && closeMenu();
     media.addEventListener("change", handleChange);
     return () => media.removeEventListener("change", handleChange);
@@ -69,7 +70,7 @@ export default function Header() {
         </div>
       </div>
 
-      {menuOpen && (
+      {menuOpen && createPortal(
         <div className="mobile-nav-overlay" onMouseDown={(event) => event.target === event.currentTarget && closeMenu()}>
           <nav id="mobile-navigation" className="mobile-nav-panel" aria-label="Mobile navigation" aria-modal="true" role="dialog" ref={menuRef} tabIndex="-1">
             <div className="mobile-nav-heading">
@@ -83,7 +84,8 @@ export default function Header() {
             ))}
             <p className="mobile-nav-note">Hand-finished fantasy props and custom commissions.</p>
           </nav>
-        </div>
+        </div>,
+        document.body
       )}
     </header>
   );

@@ -1,11 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import Seo, { SITE_URL } from "../components/Seo";
 import ProductCard from "../components/ProductCard";
+import CollectionArtwork from "../components/CollectionArtwork";
 import { ErrorState, LoadingGrid } from "../components/AsyncState";
 import { getCollectionsPage, getProductsPage } from "../lib/shopify";
-import { shopifyImageUrl, shopifySrcSet } from "../lib/images";
-import HeroImage from "../assets/hero.png";
+
+const ArcaneArtifact = lazy(() => import("../components/ArcaneArtifact"));
+
+function ArtifactFallback() {
+  return <div className="artifact-stage artifact-static" role="img" aria-label="A voidglass reliquary surrounded by arcane rings"><span className="artifact-static-relic" aria-hidden="true" /></div>;
+}
 
 const trustSignals = [
   ["Made with intent", "Thoughtful print preparation, assembly, and finish direction."],
@@ -63,10 +68,8 @@ export default function HomePage() {
           <p className="hero-note">Independent craft studio · Secure Shopify checkout</p>
         </div>
         <div className="hero-art">
-          <div className="hero-image-frame">
-            <img src={HeroImage} alt="Celestial fantasy staff created by Ethereal Armory" width="343" height="361" fetchPriority="high" />
-          </div>
-          <p><span>Featured craft</span><strong>Celestial mage staff</strong></p>
+          <Suspense fallback={<ArtifactFallback />}><ArcaneArtifact /></Suspense>
+          <p><span>Original artifact</span><strong>Voidglass reliquary</strong></p>
         </div>
       </section>
 
@@ -81,7 +84,7 @@ export default function HomePage() {
             {status === "loading" ? Array.from({ length: 3 }, (_, index) => <div className="collection-card skeleton-card" key={index}><span className="skeleton-media" /></div>) : data.collections.slice(0, 3).map((collection) => (
               <Link className="collection-card" to={`/collections/${collection.handle}`} key={collection.id}>
                 <div className="collection-card-media">
-                  {collection.image?.url ? <img src={shopifyImageUrl(collection.image.url, 800)} srcSet={shopifySrcSet(collection.image.url, [480, 800, 1200])} sizes="(max-width: 760px) 92vw, 31vw" alt={collection.image.altText || collection.title} width={collection.image.width || 800} height={collection.image.height || 800} loading="lazy" /> : <span className="image-placeholder" aria-hidden="true">◇</span>}
+                  <CollectionArtwork collection={collection} sizes="(max-width: 768px) 92vw, 31vw" />
                 </div>
                 <div><p className="overline">Collection</p><h3>{collection.title}</h3><span className="text-link">Explore collection <span aria-hidden="true">→</span></span></div>
               </Link>

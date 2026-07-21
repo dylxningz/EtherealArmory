@@ -177,7 +177,13 @@ const PRODUCTS_QUERY = `
 const COLLECTIONS_QUERY = `
   query CollectionsList($first: Int!, $after: String) {
     collections(first: $first, after: $after, sortKey: UPDATED_AT, reverse: true) {
-      nodes { id handle title description image { url altText width height } }
+      nodes {
+        id handle title description
+        image { url altText width height }
+        products(first: 4) {
+          nodes { id title featuredImage { url altText width height } }
+        }
+      }
       pageInfo { hasNextPage endCursor }
     }
   }

@@ -1,29 +1,43 @@
 import { useEffect, useRef, useState } from "react";
+import { getJudgeMeRenderState } from "../lib/reviews";
 
 const SHOP_DOMAIN = import.meta.env.VITE_JUDGEME_SHOP_DOMAIN;
 const PUBLIC_TOKEN = import.meta.env.VITE_JUDGEME_PUBLIC_TOKEN;
+const scriptPromises = new Map();
 
 function getShopifyProductId(productId) {
   return productId?.split("/").pop() || "";
 }
 
 function loadJudgeMeScript(id, src) {
-  const existingScript = document.getElementById(id);
+  if (scriptPromises.has(id)) return scriptPromises.get(id);
 
-  if (existingScript) {
-    return Promise.resolve();
-  }
+  const promise = new Promise((resolve, reject) => {
+    const existingScript = document.getElementById(id);
+    if (existingScript?.dataset.loaded === "true") {
+      resolve();
+      return;
+    }
 
-  return new Promise((resolve, reject) => {
-    const script = document.createElement("script");
+    const script = existingScript || document.createElement("script");
     script.id = id;
     script.src = src;
     script.async = true;
     script.dataset.cfasync = "false";
-    script.addEventListener("load", resolve, { once: true });
-    script.addEventListener("error", reject, { once: true });
-    document.head.appendChild(script);
+    script.addEventListener("load", () => {
+      script.dataset.loaded = "true";
+      resolve();
+    }, { once: true });
+    script.addEventListener("error", (error) => {
+      scriptPromises.delete(id);
+      script.remove();
+      reject(error);
+    }, { once: true });
+    if (!existingScript) document.head.appendChild(script);
   });
+
+  scriptPromises.set(id, promise);
+  return promise;
 }
 
 export default function JudgeMeReviews({ productId, productTitle }) {
@@ -31,40 +45,45 @@ export default function JudgeMeReviews({ productId, productTitle }) {
   const sectionRef = useRef(null);
   const widgetRef = useRef(null);
   const [phase, setPhase] = useState("idle");
+  const configured = Boolean(SHOP_DOMAIN && PUBLIC_TOKEN && numericProductId);
 
   useEffect(() => {
-    if (!SHOP_DOMAIN || !PUBLIC_TOKEN || !numericProductId) return;
+    if (!configured) return undefined;
 
     let mutationObserver;
+    let renderTimer;
+    let cancelled = false;
     const section = sectionRef.current;
+
+    function readWidgetState() {
+      if (cancelled) return;
+      const state = getJudgeMeRenderState(widgetRef.current);
+      if (state !== "loading") {
+        window.clearTimeout(renderTimer);
+        setPhase(state);
+      }
+    }
 
     function loadReviews() {
       setPhase("loading");
       const widget = widgetRef.current;
-      mutationObserver = new MutationObserver(() => {
-        if (widget?.children.length) setPhase("loaded");
-      });
-      if (widget) mutationObserver.observe(widget, { childList: true, subtree: true });
+      mutationObserver = new MutationObserver(readWidgetState);
+      if (widget) mutationObserver.observe(widget, { childList: true, subtree: true, characterData: true });
 
       window.jdgm = window.jdgm || {};
       window.jdgm.SHOP_DOMAIN = SHOP_DOMAIN;
       window.jdgm.PLATFORM = "shopify";
       window.jdgm.PUBLIC_TOKEN = PUBLIC_TOKEN;
 
-      loadJudgeMeScript(
-        "judgeme-widget-preloader",
-        "https://cdnwidget.judge.me/widget_preloader.js"
-      )
-      .then(() =>
-        loadJudgeMeScript(
-        "judgeme-installed-assets",
-          "https://cdnwidget.judge.me/assets/installed.js"
-        )
-      )
-      .then(() => {
-        window.jdgmCacheServer?.reloadAllWidgets?.();
-      })
-      .catch(() => setPhase("error"));
+      loadJudgeMeScript("judgeme-widget-preloader", "https://cdnwidget.judge.me/widget_preloader.js")
+        .then(() => loadJudgeMeScript("judgeme-installed-assets", "https://cdnwidget.judge.me/assets/installed.js"))
+        .then(() => {
+          if (cancelled) return;
+          window.jdgmCacheServer?.reloadAllWidgets?.();
+          readWidgetState();
+          renderTimer = window.setTimeout(() => setPhase((current) => current === "loading" ? "error" : current), 10000);
+        })
+        .catch(() => !cancelled && setPhase("error"));
     }
 
     const intersectionObserver = new IntersectionObserver((entries) => {
@@ -76,16 +95,18 @@ export default function JudgeMeReviews({ productId, productTitle }) {
     if (section) intersectionObserver.observe(section);
 
     return () => {
+      cancelled = true;
       intersectionObserver.disconnect();
       mutationObserver?.disconnect();
+      window.clearTimeout(renderTimer);
     };
-  }, [numericProductId]);
+  }, [configured, numericProductId]);
 
-  if (!PUBLIC_TOKEN || !numericProductId) return null;
+  if (!configured) return null;
 
   return (
     <section
-      className={`judgeme-reviews-section ${phase === "loaded" ? "is-loaded" : ""}`}
+      className={`judgeme-reviews-section is-${phase}`}
       aria-label={`${productTitle} reviews`}
       ref={sectionRef}
     >
@@ -97,11 +118,12 @@ export default function JudgeMeReviews({ productId, productTitle }) {
       <div
         ref={widgetRef}
         id="judgeme_product_reviews"
-        className="jdgm-widget jdgm-review-widget"
+        className="jdgm-widget jdgm-review-widget jdgm-outside-widget"
         data-id={numericProductId}
         data-product-title={productTitle}
       />
       {phase === "loading" && <p className="reviews-status" aria-live="polite">Loading verified reviews…</p>}
+      {phase === "empty" && <div className="reviews-empty" role="status"><strong>No reviews yet.</strong><span>Be the first collector to share an honest review of this piece.</span></div>}
       {phase === "error" && <p className="reviews-status" role="status">Reviews are temporarily unavailable.</p>}
     </section>
   );

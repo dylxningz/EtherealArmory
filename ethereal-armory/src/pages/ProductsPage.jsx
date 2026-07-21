@@ -2,10 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import Seo, { SITE_URL } from "../components/Seo";
 import ProductCard from "../components/ProductCard";
+import CollectionArtwork from "../components/CollectionArtwork";
 import { EmptyState, ErrorState, LoadingGrid } from "../components/AsyncState";
 import { getCollectionProductsPage, getCollectionsPage, getProductsPage } from "../lib/shopify";
 import { getCatalogState, sortProducts, updateCatalogState } from "../lib/commerce";
-import { shopifyImageUrl } from "../lib/images";
 import "./ProductsPage.css";
 
 const sortOptions = {
@@ -113,8 +113,8 @@ export default function ProductsPage() {
       <section className="collection-rail-wrap section-shell" aria-label="Shop by collection">
         <div className="collection-rail-heading"><h2>Collections</h2><div><button className="icon-button" onClick={() => carouselRef.current?.scrollBy({ left: -360, behavior: "smooth" })} aria-label="Previous collections" type="button">←</button><button className="icon-button" onClick={() => carouselRef.current?.scrollBy({ left: 360, behavior: "smooth" })} aria-label="Next collections" type="button">→</button></div></div>
         <div className="collection-rail" ref={carouselRef}>
-          <Link className={!handle ? "active" : ""} to="/products"><span className="rail-image image-placeholder" aria-hidden="true">◇</span><strong>All products</strong></Link>
-          {collections.map((collection) => <Link className={handle === collection.handle ? "active" : ""} to={`/collections/${collection.handle}`} key={collection.id}>{collection.image?.url ? <img className="rail-image" src={shopifyImageUrl(collection.image.url, 320)} alt="" width={180} height={180} loading="lazy" /> : <span className="rail-image image-placeholder" aria-hidden="true">◇</span>}<strong>{collection.title}</strong></Link>)}
+          <Link className={!handle ? "active" : ""} to="/products"><span className="rail-image collection-artwork-fallback is-compact" aria-hidden="true"><img src="/brand-mark.svg" alt="" width="96" height="96" /></span><strong>All products</strong></Link>
+          {collections.map((collection) => <Link className={handle === collection.handle ? "active" : ""} to={`/collections/${collection.handle}`} key={collection.id}><CollectionArtwork collection={collection} compact sizes="(max-width: 650px) 132px, 168px" /><strong>{collection.title}</strong></Link>)}
         </div>
       </section>
 
