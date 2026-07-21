@@ -1,337 +1,176 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
-import {
-  addToCartWithRecovery,
-  createCartAndGetCheckoutUrl,
-  getProductByHandle,
-} from "../lib/shopify";
+import { Link, useParams } from "react-router-dom";
+import Seo, { SITE_URL } from "../components/Seo";
+import ProductCard from "../components/ProductCard";
+import JudgeMeReviews from "../components/JudgeMeReviews";
+import { ErrorState } from "../components/AsyncState";
+import { useCart } from "../context/useCart";
+import { getProductByHandle, getProductsPage } from "../lib/shopify";
+import { clampQuantity, isOptionValueAvailable, resolveVariant } from "../lib/commerce";
+import { formatMoney, getSalePricing } from "../lib/pricing";
+import { shopifyImageUrl, shopifySrcSet } from "../lib/images";
 import "./ProductPage.css";
-import { getSalePricing, formatPrice } from "../lib/pricing";
 
-function optionsToKey(selectedOptions) {
-  return selectedOptions
-    .slice()
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map((opt) => `${opt.name}:${opt.value}`)
-    .join("|");
+function plainText(html = "") {
+  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
-function buildVariantMap(variants) {
-  const map = new Map();
-
-  variants.forEach((variant) => {
-    map.set(optionsToKey(variant.selectedOptions), variant);
-  });
-
-  return map;
-}
-
-function getFriendlyCartError(error, fallback) {
-  const message = error?.message || "";
-
-  if (/available|sold out|quantity|inventory/i.test(message)) {
-    return message;
+function QuantityControl({ value, onChange, disabled }) {
+  function commit(next) {
+    onChange(clampQuantity(next));
   }
-
-  return fallback;
+  return (
+    <div className="quantity-control product-quantity" aria-label="Product quantity">
+      <button onClick={() => commit(value - 1)} disabled={disabled || value <= 1} aria-label="Decrease quantity" type="button">−</button>
+      <input value={value} onChange={(event) => onChange(event.target.value)} onBlur={() => commit(value)} inputMode="numeric" aria-label="Quantity" disabled={disabled} />
+      <button onClick={() => commit(Number(value) + 1)} disabled={disabled || value >= 99} aria-label="Increase quantity" type="button">+</button>
+    </div>
+  );
 }
 
 export default function ProductPage() {
   const { handle } = useParams();
-
+  const { addItem, buyNow, status: cartStatus, error: cartError } = useCart();
   const [product, setProduct] = useState(null);
+  const [related, setRelated] = useState([]);
   const [selectedOptions, setSelectedOptions] = useState({});
   const [selectedImage, setSelectedImage] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [buying, setBuying] = useState(false);
-  const [adding, setAdding] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-  const [error, setError] = useState("");
-  const [cartError, setCartError] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [status, setStatus] = useState("loading");
+  const [message, setMessage] = useState("");
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
-    let ignore = false;
-
-    async function loadProduct() {
-      try {
-        setLoading(true);
-        setError("");
-
-        const data = await getProductByHandle(handle);
-
-        if (!data) {
-          throw new Error("Product not found.");
-        }
-
-        if (ignore) return;
-
-        setProduct(data);
-
-        const initialOptions = {};
-        data.options.forEach((option) => {
-          initialOptions[option.name] = option.values[0];
-        });
-
-        const firstVariant = data.variants.nodes[0];
-
-        if (firstVariant?.selectedOptions?.length) {
-          firstVariant.selectedOptions.forEach((opt) => {
-            initialOptions[opt.name] = opt.value;
-          });
-        }
-
-        setSelectedOptions(initialOptions);
-
-        const firstImage =
-          firstVariant?.image?.url || data.images.nodes[0]?.url || null;
-
-        setSelectedImage(firstImage);
-      } catch (err) {
-        if (!ignore) {
-          setError(err.message || "Failed to load product.");
-        }
-      } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
+    const controller = new AbortController();
+    getProductByHandle(handle, { signal: controller.signal }).then((result) => {
+      setProduct(result);
+      if (!result) {
+        setStatus("not-found");
+        return;
       }
-    }
+      const initialVariant = result.variants.nodes.find((variant) => variant.availableForSale) || result.variants.nodes[0];
+      setSelectedOptions(Object.fromEntries((initialVariant?.selectedOptions || []).map(({ name, value }) => [name, value])));
+      setSelectedImage(initialVariant?.image || result.images.nodes[0] || null);
+      setQuantity(1);
+      setStatus("ready");
 
-    loadProduct();
+      if (result.productType) {
+        getProductsPage({ first: 5, query: `product_type:${JSON.stringify(result.productType)}`, signal: controller.signal })
+          .then((connection) => setRelated(connection.nodes.filter((item) => item.id !== result.id).slice(0, 4)))
+          .catch(() => setRelated([]));
+      }
+    }).catch((error) => {
+      if (error.name !== "AbortError") setStatus("error");
+    });
+    return () => controller.abort();
+  }, [handle, retryKey]);
 
-    return () => {
-      ignore = true;
-    };
-  }, [handle]);
+  const variants = useMemo(() => product?.variants?.nodes || [], [product]);
+  const selectedVariant = useMemo(() => resolveVariant(variants, selectedOptions), [selectedOptions, variants]);
+  const pricing = getSalePricing(selectedVariant?.price, selectedVariant?.compareAtPrice);
+  const busy = cartStatus === "adding";
 
-  const selectedVariant = useMemo(() => {
-    if (!product) return null;
-
-    const variantMap = buildVariantMap(product.variants.nodes);
-    const key = optionsToKey(
-      Object.entries(selectedOptions).map(([name, value]) => ({ name, value }))
-    );
-
-    return variantMap.get(key) || product.variants.nodes[0] || null;
-  }, [product, selectedOptions]);
-
-  const salePricing = selectedVariant?.price?.amount
-  ? getSalePricing(selectedVariant.price.amount)
-  : null;
-
-  const galleryImages = useMemo(() => {
-    if (!product) return [];
-
-    const base = product.images.nodes.map((img) => ({
-      id: img.id,
-      url: img.url,
-      altText: img.altText || product.title,
-    }));
-
-    if (
-      selectedVariant?.image?.url &&
-      !base.some((img) => img.url === selectedVariant.image.url)
-    ) {
-      return [
-        {
-          id: "selected-variant-image",
-          url: selectedVariant.image.url,
-          altText: selectedVariant.image.altText || product.title,
-        },
-        ...base,
-      ];
-    }
-
-    return base;
+  const schemas = useMemo(() => {
+    if (!product || !selectedVariant) return [];
+    const description = plainText(product.descriptionHtml || product.description).slice(0, 5000);
+    return [
+      { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+        { "@type": "ListItem", position: 2, name: "Shop", item: `${SITE_URL}/products` },
+        { "@type": "ListItem", position: 3, name: product.title, item: `${SITE_URL}/products/${product.handle}` },
+      ] },
+      { "@context": "https://schema.org", "@type": "Product", name: product.title, description, image: product.images.nodes.map((image) => image.url), sku: selectedVariant.sku || undefined, brand: { "@type": "Brand", name: product.vendor || "Ethereal Armory" }, offers: { "@type": "Offer", url: `${SITE_URL}/products/${product.handle}`, priceCurrency: selectedVariant.price.currencyCode, price: selectedVariant.price.amount, availability: selectedVariant.availableForSale ? "https://schema.org/InStock" : "https://schema.org/OutOfStock", itemCondition: "https://schema.org/NewCondition" } },
+    ];
   }, [product, selectedVariant]);
 
-  useEffect(() => {
-    if (selectedVariant?.image?.url) {
-      setSelectedImage(selectedVariant.image.url);
-    }
-  }, [selectedVariant]);
-
-  function handleOptionChange(optionName, value) {
-    setSelectedOptions((prev) => ({
-      ...prev,
-      [optionName]: value,
-    }));
-  }
-
-  async function handleAddToCart() {
-    if (!selectedVariant?.id) return;
-
+  async function addToCart() {
+    if (!selectedVariant?.availableForSale || busy) return;
+    setMessage("");
     try {
-      setAdding(true);
-      setCartError("");
-
-      const result = await addToCartWithRecovery(selectedVariant.id);
-
-      if (typeof window.loadCartFromStorage === "function") {
-        await window.loadCartFromStorage(result.cart);
-      }
-
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
-    } catch (err) {
-      console.error(err);
-      setCartError(
-        getFriendlyCartError(
-          err,
-          "We could not add this item to your cart. Please try again."
-        )
-      );
-    } finally {
-      setAdding(false);
+      await addItem(selectedVariant.id, quantity);
+      setMessage("Added to your cart.");
+    } catch {
+      setMessage("This item could not be added. Please try again.");
     }
   }
 
-  async function handleBuyNow() {
-    if (!selectedVariant?.id) return;
-
+  async function startCheckout() {
+    if (!selectedVariant?.availableForSale || busy) return;
+    setMessage("");
     try {
-      setBuying(true);
-      setCartError("");
-      const checkoutUrl = await createCartAndGetCheckoutUrl(selectedVariant.id);
-      window.location.href = checkoutUrl;
-    } catch (err) {
-      console.error(err);
-      setCartError(
-        getFriendlyCartError(
-          err,
-          "We could not start checkout. Please try again."
-        )
-      );
-    } finally {
-      setBuying(false);
+      await buyNow(selectedVariant.id, quantity);
+    } catch {
+      setMessage("Checkout could not be started. Your existing cart was preserved.");
     }
   }
 
-  if (loading) {
-    return <div className="product-page-status">Loading product...</div>;
-  }
+  if (status === "loading" || (product && product.handle !== handle)) return <main id="main-content" className="product-page product-loading" aria-busy="true"><div className="product-loading-image" /><div className="product-loading-copy"><span /><span /><span /></div></main>;
+  if (status === "error") return <main id="main-content" className="product-page section-shell"><Seo title="Product Unavailable" path={`/products/${handle}`} noIndex /><ErrorState title="This product could not be loaded" message="Shopify did not respond. Your cart has not been changed." onRetry={() => { setStatus("loading"); setRetryKey((key) => key + 1); }} /></main>;
+  if (status === "not-found") return <main id="main-content" className="product-page section-shell"><Seo title="Product Not Found" path={`/products/${handle}`} noIndex /><section className="status-panel"><p className="overline">Product not found</p><h1>This artifact is no longer here.</h1><p>It may have moved to another collection or left the armory.</p><Link className="button button-primary" to="/products">Browse available pieces</Link></section></main>;
 
-  if (error) {
-    return <div className="product-page-status">{error}</div>;
-  }
-
-  if (!product) {
-    return <div className="product-page-status">Product not found.</div>;
-  }
+  const image = selectedImage || selectedVariant?.image || product.images.nodes[0];
+  const description = product.seo?.description || plainText(product.descriptionHtml || product.description).slice(0, 160);
 
   return (
-    <div className="product-page">
-      <div className="product-gallery">
-        <div className="product-main-image-wrap">
-          {selectedImage ? (
-            <img
-              src={selectedImage}
-              alt={product.title}
-              className="product-main-image"
-            />
-          ) : (
-            <div className="product-image-placeholder">No image available</div>
-          )}
+    <main id="main-content" className="product-page">
+      <Seo title={product.seo?.title || product.title} description={description} path={`/products/${product.handle}`} image={image?.url} type="product" structuredData={schemas} />
+      <nav className="breadcrumbs section-shell" aria-label="Breadcrumb"><Link to="/">Home</Link><span aria-hidden="true">/</span><Link to="/products">Shop</Link><span aria-hidden="true">/</span><span>{product.title}</span></nav>
+
+      <section className="product-purchase section-shell">
+        <div className="product-primary-media">
+          {image?.url ? <img src={shopifyImageUrl(image.url, 1200)} srcSet={shopifySrcSet(image.url, [480, 720, 960, 1200, 1600])} sizes="(max-width: 900px) 100vw, 56vw" width={image.width || 1200} height={image.height || 1200} alt={image.altText || product.title} fetchPriority="high" /> : <span className="image-placeholder" aria-hidden="true">◇</span>}
+          {pricing.isOnSale && <span className="sale-badge">{pricing.percentOff}% off</span>}
         </div>
 
-        {galleryImages.length > 0 && (
-          <div className="product-thumbnails">
-            {galleryImages.map((image) => (
-              <button
-                key={image.id}
-                className={`product-thumb-btn ${
-                  selectedImage === image.url ? "active" : ""
-                }`}
-                onClick={() => setSelectedImage(image.url)}
-              >
-                <img
-                  src={image.url}
-                  alt={image.altText}
-                  className="product-thumb-image"
-                />
-              </button>
-            ))}
+        <div className="product-info">
+          <p className="overline">{product.productType || "Collector piece"}</p>
+          <h1>{product.title}</h1>
+          <div className="product-price" aria-label={pricing.isOnSale ? `Sale price ${formatMoney(pricing.finalPrice, pricing.currencyCode)}, originally ${formatMoney(pricing.originalPrice, pricing.currencyCode)}` : undefined}>
+            <span>{formatMoney(pricing.finalPrice, pricing.currencyCode)}</span>
+            {pricing.isOnSale && <del>{formatMoney(pricing.originalPrice, pricing.currencyCode)}</del>}
           </div>
-        )}
-      </div>
+          <p className={`stock-status ${selectedVariant?.availableForSale ? "available" : "unavailable"}`}><span aria-hidden="true" />{selectedVariant ? (selectedVariant.availableForSale ? "Available to order" : "Selected option is sold out") : "This combination is unavailable"}</p>
 
-      <div className="product-info">
-        <h1>{product.title}</h1>
+          {product.options.filter((option) => option.name !== "Title" && !(option.values.length === 1 && option.values[0] === "Default Title")).map((option) => (
+            <fieldset className="option-group" key={option.name}>
+              <legend>{option.name}: <strong>{selectedOptions[option.name]}</strong></legend>
+              <div className="option-values">{option.values.map((value) => {
+                const available = isOptionValueAvailable(variants, selectedOptions, option.name, value);
+                const selected = selectedOptions[option.name] === value;
+                return <button className={selected ? "selected" : ""} aria-pressed={selected} disabled={!available} onClick={() => {
+                  const nextOptions = { ...selectedOptions, [option.name]: value };
+                  const nextVariant = resolveVariant(variants, nextOptions);
+                  setSelectedOptions(nextOptions);
+                  if (nextVariant?.image) setSelectedImage(nextVariant.image);
+                }} key={value} type="button">{value}</button>;
+              })}</div>
+            </fieldset>
+          ))}
 
-<div className="product-price-block">
-  {salePricing?.isOnSale ? (
-    <>
-      <div className="product-sale-row">
-        <span className="product-sale-price">${formatPrice(salePricing.finalPrice)}</span>
-        <span className="product-original-price">
-          ${formatPrice(salePricing.originalPrice)}
-        </span>
-      </div>
-      <div className="product-sale-badge">
-        {salePricing.label}
-      </div>
-    </>
-  ) : (
-    <div className="product-price">
-      ${selectedVariant?.price?.amount ? formatPrice(selectedVariant.price.amount) : "0.00"}
-    </div>
-  )}
-</div>
-
-        <div
-          className="product-description"
-          dangerouslySetInnerHTML={{ __html: product.descriptionHtml }}
-        />
-
-        {product.options?.length > 0 && (
-          <div className="product-options">
-            {product.options.map((option) => (
-              <div key={option.name} className="product-option-group">
-                <label className="product-option-label">{option.name}</label>
-
-                <div className="product-option-values">
-                  {option.values.map((value) => (
-                    <button
-                      key={value}
-                      className={`option-chip ${
-                        selectedOptions[option.name] === value ? "selected" : ""
-                      }`}
-                      onClick={() => handleOptionChange(option.name, value)}
-                    >
-                      {value}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
+          <div className="purchase-controls">
+            <label>Quantity<QuantityControl value={quantity} onChange={setQuantity} disabled={busy || !selectedVariant?.availableForSale} /></label>
+            <div className="purchase-buttons">
+              <button className="button button-primary" onClick={addToCart} disabled={busy || !selectedVariant?.availableForSale} type="button">{busy ? "Updating cart…" : selectedVariant?.availableForSale ? "Add to cart" : "Unavailable"}</button>
+              <button className="button button-secondary" onClick={startCheckout} disabled={busy || !selectedVariant?.availableForSale} type="button">Buy now</button>
+            </div>
           </div>
-        )}
+          <p className="checkout-note">Buy now adds this selection to your current cart, then opens secure Shopify checkout.</p>
+          <p className="purchase-message" aria-live="polite">{message || cartError}</p>
 
-        <div className="product-action-row">
-          <button
-            className="buy-now-btn"
-            onClick={handleAddToCart}
-            disabled={!selectedVariant?.availableForSale || adding}
-          >
-            {adding ? "Adding..." : "Add to Cart"}
-          </button>
-
-          <button
-            className="secondary-btn"
-            onClick={handleBuyNow}
-            disabled={!selectedVariant?.availableForSale || buying}
-          >
-            {buying ? "Redirecting..." : "Buy Now"}
-          </button>
+          <div className="product-assurances">
+            <details><summary>Processing & shipping</summary><p>{product.processingTime?.value || "Processing time varies by piece and is confirmed in the listing or order communication."} Shipping timing and cost are calculated separately.</p><Link to="/shipping-policy">Read the shipping policy</Link></details>
+            <details><summary>Returns & order support</summary><p>Return eligibility depends on the item and whether it was custom made. Contact the studio promptly if an order arrives damaged.</p><Link to="/returns-policy">Read the returns policy</Link></details>
+          </div>
         </div>
+      </section>
 
-        {cartError && <p className="product-cart-error">{cartError}</p>}
-      </div>
-      {showToast && (
-  <div className="toast">
-    Added to cart
-  </div>
-)}
-    </div>
+      {product.images.nodes.length > 1 && <section className="product-gallery section-shell" aria-labelledby="gallery-title"><div className="section-heading compact"><div><p className="overline">Every angle</p><h2 id="gallery-title">Product gallery</h2></div></div><div className="thumbnail-rail">{product.images.nodes.map((galleryImage, index) => <button className={galleryImage.id === image?.id ? "active" : ""} onClick={() => setSelectedImage(galleryImage)} aria-label={`View image ${index + 1} of ${product.images.nodes.length}`} aria-pressed={galleryImage.id === image?.id} key={galleryImage.id} type="button"><img src={shopifyImageUrl(galleryImage.url, 320)} alt="" width={galleryImage.width || 320} height={galleryImage.height || 320} loading="lazy" /></button>)}</div></section>}
+
+      <section className="product-details section-shell"><header><p className="overline">The artifact</p><h2>Details & story</h2></header>{product.descriptionHtml ? <div className="rich-text" dangerouslySetInnerHTML={{ __html: product.descriptionHtml }} /> : <p>{product.description}</p>}</section>
+
+      <JudgeMeReviews productId={product.id} productTitle={product.title} />
+
+      {related.length > 0 && <section className="related-products content-section section-shell"><header className="section-heading"><div><p className="overline">From the same realm</p><h2>Related pieces.</h2></div><Link className="text-link" to="/products">Shop all <span aria-hidden="true">→</span></Link></header><div className="product-grid">{related.map((item) => <ProductCard product={item} key={item.id} />)}</div></section>}
+    </main>
   );
 }

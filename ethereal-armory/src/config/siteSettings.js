@@ -1,7 +1,8 @@
 export const siteSettings = {
-  sitewideSale: {
+  announcement: {
     enabled: true,
-    percentOff: 10,
-    label: "10% Off Sitewide",
+    message: "Eligible offers are applied by Shopify and reflected in your cart or at checkout.",
+    storageKey: "ea-announcement-2026-07",
   },
+  supportEmail: "dylangreene@etherealarmory.com",
 };
