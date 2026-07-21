@@ -6,15 +6,18 @@ const require = createRequire(import.meta.url);
 const axePath = require.resolve("axe-core/axe.min.js");
 
 const image = { id: "image-1", url: "http://127.0.0.1:5173/og-image.png", altText: "Celestial staff", width: 800, height: 800 };
+const portraitImage = { id: "image-portrait", url: "http://127.0.0.1:5173/test-product-portrait.svg", altText: "Portrait view of the celestial staff", width: 600, height: 1000 };
+const landscapeImage = { id: "image-landscape", url: "http://127.0.0.1:5173/test-product-landscape.svg", altText: "Landscape view of the celestial staff", width: 1200, height: 600 };
+const squareImage = { id: "image-square", url: "http://127.0.0.1:5173/test-product-square.svg", altText: "Square view of the celestial staff", width: 800, height: 800 };
 const product = {
   id: "gid://shopify/Product/1", handle: "celestial-staff", title: "Celestial Staff", description: "A display-ready fantasy staff.", descriptionHtml: "<p>A display-ready fantasy staff.</p>",
   productType: "Props", vendor: "Ethereal Armory", tags: [], availableForSale: true, onlineStoreUrl: null, seo: { title: "Celestial Staff", description: "A display-ready fantasy staff." }, processingTime: null,
-  featuredImage: image, images: { nodes: [image] }, options: [{ name: "Finish", values: ["Arcane", "Ancient", "Mundane"] }],
+  featuredImage: image, images: { nodes: [portraitImage, landscapeImage, squareImage] }, options: [{ name: "Finish", values: ["Arcane", "Ancient", "Mundane"] }],
   priceRange: { minVariantPrice: { amount: "120.00", currencyCode: "USD" } }, compareAtPriceRange: { minVariantPrice: { amount: "150.00", currencyCode: "USD" } },
   variants: { nodes: [
-    { id: "variant-1", title: "Arcane", availableForSale: true, sku: "EA-1", selectedOptions: [{ name: "Finish", value: "Arcane" }], price: { amount: "120.00", currencyCode: "USD" }, compareAtPrice: { amount: "150.00", currencyCode: "USD" }, image },
-    { id: "variant-2", title: "Ancient", availableForSale: false, sku: "EA-2", selectedOptions: [{ name: "Finish", value: "Ancient" }], price: { amount: "120.00", currencyCode: "USD" }, compareAtPrice: null, image },
-    { id: "variant-3", title: "Mundane", availableForSale: true, sku: "EA-3", selectedOptions: [{ name: "Finish", value: "Mundane" }], price: { amount: "135.00", currencyCode: "USD" }, compareAtPrice: null, image },
+    { id: "variant-1", title: "Arcane", availableForSale: true, sku: "EA-1", selectedOptions: [{ name: "Finish", value: "Arcane" }], price: { amount: "120.00", currencyCode: "USD" }, compareAtPrice: { amount: "150.00", currencyCode: "USD" }, image: portraitImage },
+    { id: "variant-2", title: "Ancient", availableForSale: false, sku: "EA-2", selectedOptions: [{ name: "Finish", value: "Ancient" }], price: { amount: "120.00", currencyCode: "USD" }, compareAtPrice: null, image: portraitImage },
+    { id: "variant-3", title: "Mundane", availableForSale: true, sku: "EA-3", selectedOptions: [{ name: "Finish", value: "Mundane" }], price: { amount: "135.00", currencyCode: "USD" }, compareAtPrice: null, image: portraitImage },
   ], pageInfo: { hasNextPage: false } },
 };
 const singleSaleProduct = {
@@ -46,6 +49,18 @@ async function mockShopify(page) {
   let cartQuantity = 0;
   let cartVariant = product.variants.nodes[0];
   lastAddedMerchandiseId = null;
+  await page.route("**/test-product-*.svg*", async (route) => {
+    const url = route.request().url();
+    const dimensions = url.includes("portrait")
+      ? { width: 600, height: 1000, color: "#8f698f" }
+      : url.includes("landscape")
+        ? { width: 1200, height: 600, color: "#54778f" }
+        : { width: 800, height: 800, color: "#8f7654" };
+    return route.fulfill({
+      contentType: "image/svg+xml",
+      body: `<svg xmlns="http://www.w3.org/2000/svg" width="${dimensions.width}" height="${dimensions.height}" viewBox="0 0 ${dimensions.width} ${dimensions.height}"><rect width="100%" height="100%" fill="${dimensions.color}"/><path d="M0 0L${dimensions.width} ${dimensions.height}M${dimensions.width} 0L0 ${dimensions.height}" stroke="#f2dfb4" stroke-width="20"/></svg>`,
+    });
+  });
   const cart = () => ({
     id: "cart-1",
     checkoutUrl: "https://checkout.example/cart-1",
@@ -99,6 +114,39 @@ async function expectNoMaterialAxeViolations(page) {
   }
   expect(material, material.map((violation) => `${violation.id}: ${violation.help}`).join("\n")).toEqual([]);
   return results.violations;
+}
+
+async function getPrimaryMediaMetrics(page) {
+  return page.evaluate(() => {
+    const frame = document.querySelector(".product-primary-media");
+    const image = frame?.querySelector("img");
+    if (!frame || !image) return null;
+
+    const frameBox = frame.getBoundingClientRect();
+    const imageBox = image.getBoundingClientRect();
+    const styles = getComputedStyle(image);
+    const naturalRatio = image.naturalWidth / image.naturalHeight;
+    const containedWidth = Math.min(imageBox.width, imageBox.height * naturalRatio);
+    const containedHeight = containedWidth / naturalRatio;
+
+    return {
+      frame: { x: frameBox.x + window.scrollX, y: frameBox.y + window.scrollY, width: frameBox.width, height: frameBox.height },
+      image: { x: imageBox.x, y: imageBox.y, width: imageBox.width, height: imageBox.height },
+      natural: { width: image.naturalWidth, height: image.naturalHeight, ratio: naturalRatio },
+      contained: {
+        width: containedWidth,
+        height: containedHeight,
+        horizontalSpace: imageBox.width - containedWidth,
+        verticalSpace: imageBox.height - containedHeight,
+      },
+      objectFit: styles.objectFit,
+      objectPosition: styles.objectPosition,
+      position: styles.position,
+      currentSrc: image.currentSrc,
+      documentWidth: document.documentElement.scrollWidth,
+      viewportWidth: document.documentElement.clientWidth,
+    };
+  });
 }
 
 test.beforeEach(async ({ page }) => {
@@ -334,6 +382,74 @@ test("product purchase information is available early on mobile", async ({ page 
     expect(box.y).toBeLessThan(900);
   }
   await expect(page.getByRole("button", { name: "Ancient" })).toBeDisabled();
+});
+
+test("primary product media contains and centers portrait, landscape, and square gallery images", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "Gallery image geometry is exercised once at the representative mobile viewport.");
+  await page.goto("/products/celestial-staff");
+
+  const primaryImage = page.locator(".product-primary-media img");
+  const portraitButton = page.getByRole("button", { name: "View image 1 of 3" });
+  const landscapeButton = page.getByRole("button", { name: "View image 2 of 3" });
+  const squareButton = page.getByRole("button", { name: "View image 3 of 3" });
+  await expect(primaryImage).toBeVisible();
+  const initialFrame = (await getPrimaryMediaMetrics(page)).frame;
+
+  await expect(portraitButton).toHaveAttribute("aria-pressed", "true");
+  const portrait = await getPrimaryMediaMetrics(page);
+  expect(portrait.currentSrc).toContain("test-product-portrait.svg");
+  expect(portrait.natural.ratio).toBeCloseTo(0.6, 2);
+
+  await landscapeButton.focus();
+  await expect(landscapeButton).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(landscapeButton).toHaveAttribute("aria-pressed", "true");
+  await expect(primaryImage).toHaveAttribute("alt", landscapeImage.altText);
+  const landscape = await getPrimaryMediaMetrics(page);
+  expect(landscape.currentSrc).toContain("test-product-landscape.svg");
+  expect(landscape.natural.ratio).toBeCloseTo(2, 2);
+
+  await squareButton.click();
+  await expect(squareButton).toHaveAttribute("aria-pressed", "true");
+  await expect(primaryImage).toHaveAttribute("alt", squareImage.altText);
+  const square = await getPrimaryMediaMetrics(page);
+  expect(square.currentSrc).toContain("test-product-square.svg");
+  expect(square.natural.ratio).toBeCloseTo(1, 2);
+
+  for (const metrics of [portrait, landscape, square]) {
+    expect(metrics.objectFit).toBe("contain");
+    expect(metrics.objectPosition).toBe("50% 50%");
+    expect(metrics.position).toBe("absolute");
+    expect(metrics.image.width).toBeLessThanOrEqual(metrics.frame.width);
+    expect(metrics.image.height).toBeLessThanOrEqual(metrics.frame.height);
+    expect(metrics.contained.width).toBeLessThanOrEqual(metrics.image.width + 0.5);
+    expect(metrics.contained.height).toBeLessThanOrEqual(metrics.image.height + 0.5);
+    expect(Math.max(metrics.contained.horizontalSpace, metrics.contained.verticalSpace)).toBeGreaterThanOrEqual(0);
+    expect(metrics.frame.x).toBeCloseTo(initialFrame.x, 1);
+    expect(metrics.frame.y).toBeCloseTo(initialFrame.y, 1);
+    expect(metrics.frame.width).toBeCloseTo(initialFrame.width, 1);
+    expect(metrics.frame.height).toBeCloseTo(initialFrame.height, 1);
+  }
+
+  await portraitButton.click();
+  await expect(portraitButton).toHaveAttribute("aria-pressed", "true");
+  await expect(primaryImage).toHaveAttribute("alt", portraitImage.altText);
+});
+
+test("primary product media stays bounded without horizontal overflow", async ({ page }) => {
+  await page.goto("/products/celestial-staff");
+  await expect(page.locator(".product-primary-media img")).toBeVisible();
+  const metrics = await getPrimaryMediaMetrics(page);
+  const viewport = page.viewportSize();
+
+  expect(metrics).not.toBeNull();
+  expect(metrics.objectFit).toBe("contain");
+  expect(metrics.frame.width / metrics.frame.height).toBeCloseTo(4 / 3, 1);
+  expect(metrics.frame.height).toBeLessThanOrEqual(Math.min(680, viewport.height));
+  expect(metrics.image.width).toBeLessThanOrEqual(metrics.frame.width);
+  expect(metrics.image.height).toBeLessThanOrEqual(metrics.frame.height);
+  expect(metrics.documentWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1);
+  await expect(page.locator(".product-price")).toHaveAttribute("aria-label", "Sale price $120.00. Original price $150.00. Save 20 percent.");
 });
 
 test("sale pricing follows the selected variant and sends its Shopify ID to cart", async ({ page }, testInfo) => {

@@ -1,8 +1,8 @@
 .product-page { min-height: 70vh; }
 .product-page > .breadcrumbs { padding-top: var(--space-5); }
 .product-purchase { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(360px, 0.78fr); gap: clamp(2rem, 6vw, 6rem); align-items: start; padding-block: var(--space-5) var(--space-8); }
-.product-primary-media { position: sticky; top: 104px; display: grid; min-width: 0; aspect-ratio: 1; place-items: center; border: 1px solid var(--line); background: radial-gradient(circle at 50% 30%, rgba(210, 173, 104, 0.09), transparent 28%), #0e0e13; overflow: hidden; }
-.product-primary-media img { width: 100%; height: 100%; object-fit: contain; }
+.product-primary-media { position: sticky; top: 104px; display: grid; min-width: 0; max-height: min(680px, calc(100svh - 8rem)); aspect-ratio: 4 / 3; place-items: center; border: 1px solid var(--line); background: radial-gradient(circle at 50% 30%, rgba(210, 173, 104, 0.09), transparent 32%), linear-gradient(145deg, #111117, #0b0b10); overflow: hidden; }
+.product-primary-media img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; min-width: 0; min-height: 0; max-width: 100%; max-height: 100%; object-fit: contain; object-position: center; }
 .product-info { min-width: 0; padding-top: var(--space-5); }
 .product-info h1 { margin-bottom: var(--space-4); font-size: clamp(2.7rem, 5vw, 5rem); }
 .product-price { min-height: 3.3rem; align-content: center; gap: 0.55rem var(--space-3); margin-bottom: var(--space-4); }
@@ -63,7 +63,7 @@
 
 @media (max-width: 900px) {
   .product-purchase { grid-template-columns: 1fr; gap: var(--space-5); }
-  .product-primary-media { position: relative; top: auto; aspect-ratio: 1.08; }
+  .product-primary-media { position: relative; top: auto; }
   .product-info { padding-top: 0; }
   .product-info h1 { font-size: clamp(2.5rem, 9vw, 4.5rem); }
   .purchase-controls { grid-template-columns: auto minmax(0, 1fr); }
@@ -85,7 +85,6 @@
 }
 
 @media (max-width: 430px) {
-  .product-primary-media { aspect-ratio: 1; }
   .product-info h1 { font-size: 2.85rem; }
   .option-values button { flex: 1 0 auto; }
 }

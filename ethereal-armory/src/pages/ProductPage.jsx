@@ -120,7 +120,18 @@ export default function ProductPage() {
 
       <section className="product-purchase section-shell">
         <div className="product-primary-media">
-          {image?.url ? <img src={shopifyImageUrl(image.url, 1200)} srcSet={shopifySrcSet(image.url, [480, 720, 960, 1200, 1600])} sizes="(max-width: 900px) 100vw, 56vw" width={image.width || 1200} height={image.height || 1200} alt={image.altText || product.title} fetchPriority="high" /> : <span className="image-placeholder" aria-hidden="true">◇</span>}
+          {image?.url ? (
+            <img
+              key={image.id || image.url}
+              src={shopifyImageUrl(image.url, 1200)}
+              srcSet={shopifySrcSet(image.url, [480, 720, 960, 1200, 1600])}
+              sizes="(max-width: 900px) calc(100vw - 2rem), min(56vw, 680px)"
+              width={image.width || 1200}
+              height={image.height || 1200}
+              alt={image.altText || product.title}
+              fetchPriority="high"
+            />
+          ) : <span className="image-placeholder" aria-hidden="true">◇</span>}
         </div>
 
         <div className="product-info">
