@@ -6,23 +6,67 @@ const require = createRequire(import.meta.url);
 const axePath = require.resolve("axe-core/axe.min.js");
 
 const image = { id: "image-1", url: "http://127.0.0.1:5173/og-image.png", altText: "Celestial staff", width: 800, height: 800 };
+const portraitImage = { id: "image-portrait", url: "http://127.0.0.1:5173/test-product-portrait.svg", altText: "Portrait view of the celestial staff", width: 600, height: 1000 };
+const landscapeImage = { id: "image-landscape", url: "http://127.0.0.1:5173/test-product-landscape.svg", altText: "Landscape view of the celestial staff", width: 1200, height: 600 };
+const squareImage = { id: "image-square", url: "http://127.0.0.1:5173/test-product-square.svg", altText: "Square view of the celestial staff", width: 800, height: 800 };
 const product = {
   id: "gid://shopify/Product/1", handle: "celestial-staff", title: "Celestial Staff", description: "A display-ready fantasy staff.", descriptionHtml: "<p>A display-ready fantasy staff.</p>",
   productType: "Props", vendor: "Ethereal Armory", tags: [], availableForSale: true, onlineStoreUrl: null, seo: { title: "Celestial Staff", description: "A display-ready fantasy staff." }, processingTime: null,
-  featuredImage: image, images: { nodes: [image] }, options: [{ name: "Finish", values: ["Arcane", "Ancient"] }],
+  featuredImage: image, images: { nodes: [portraitImage, landscapeImage, squareImage] }, options: [{ name: "Finish", values: ["Arcane", "Ancient", "Mundane"] }],
   priceRange: { minVariantPrice: { amount: "120.00", currencyCode: "USD" } }, compareAtPriceRange: { minVariantPrice: { amount: "150.00", currencyCode: "USD" } },
   variants: { nodes: [
-    { id: "variant-1", title: "Arcane", availableForSale: true, sku: "EA-1", selectedOptions: [{ name: "Finish", value: "Arcane" }], price: { amount: "120.00", currencyCode: "USD" }, compareAtPrice: { amount: "150.00", currencyCode: "USD" }, image },
-    { id: "variant-2", title: "Ancient", availableForSale: false, sku: "EA-2", selectedOptions: [{ name: "Finish", value: "Ancient" }], price: { amount: "120.00", currencyCode: "USD" }, compareAtPrice: null, image },
-  ] },
+    { id: "variant-1", title: "Arcane", availableForSale: true, sku: "EA-1", selectedOptions: [{ name: "Finish", value: "Arcane" }], price: { amount: "120.00", currencyCode: "USD" }, compareAtPrice: { amount: "150.00", currencyCode: "USD" }, image: portraitImage },
+    { id: "variant-2", title: "Ancient", availableForSale: false, sku: "EA-2", selectedOptions: [{ name: "Finish", value: "Ancient" }], price: { amount: "120.00", currencyCode: "USD" }, compareAtPrice: null, image: portraitImage },
+    { id: "variant-3", title: "Mundane", availableForSale: true, sku: "EA-3", selectedOptions: [{ name: "Finish", value: "Mundane" }], price: { amount: "135.00", currencyCode: "USD" }, compareAtPrice: null, image: portraitImage },
+  ], pageInfo: { hasNextPage: false } },
+};
+const longTitleProduct = {
+  ...product,
+  handle: "clear-dagger-layout-test",
+  title: "Clear Dagger - Cloak & Dagger Inspired (Marvel Rivals - Healing Dagger) | Clear 3D Printed Resin Prop",
+  seo: { title: "Clear Dagger", description: "A clear resin healing dagger display prop." },
+};
+const singleSaleProduct = {
+  ...product,
+  id: "gid://shopify/Product/2",
+  handle: "moonlit-dagger",
+  title: "Moonlit Dagger",
+  options: [{ name: "Title", values: ["Default Title"] }],
+  priceRange: { minVariantPrice: { amount: "90.00", currencyCode: "USD" } },
+  compareAtPriceRange: { minVariantPrice: { amount: "120.00", currencyCode: "USD" } },
+  variants: { nodes: [{ id: "variant-sale-only", title: "Default Title", availableForSale: true, selectedOptions: [{ name: "Title", value: "Default Title" }], price: { amount: "90.00", currencyCode: "USD" }, compareAtPrice: { amount: "120.00", currencyCode: "USD" }, image }], pageInfo: { hasNextPage: false } },
+};
+const regularProduct = {
+  ...singleSaleProduct,
+  id: "gid://shopify/Product/3",
+  handle: "iron-sigil",
+  title: "Iron Sigil",
+  priceRange: { minVariantPrice: { amount: "75.00", currencyCode: "USD" } },
+  compareAtPriceRange: { minVariantPrice: { amount: "75.00", currencyCode: "USD" } },
+  variants: { nodes: [{ id: "variant-regular", title: "Default Title", availableForSale: true, selectedOptions: [{ name: "Title", value: "Default Title" }], price: { amount: "75.00", currencyCode: "USD" }, compareAtPrice: null, image }], pageInfo: { hasNextPage: false } },
 };
 const collection = { id: "gid://shopify/Collection/1", handle: "featured", title: "Featured Relics", description: "Collector favorites.", seo: { title: "Featured Relics", description: "Collector favorites." }, image, products: { nodes: [product] } };
 const productBackedCollection = { id: "gid://shopify/Collection/2", handle: "product-backed", title: "Product-backed Relics", description: "Product artwork fallback.", image: null, products: { nodes: [product] } };
 const emptyCollection = { id: "gid://shopify/Collection/3", handle: "empty", title: "Awaiting Relics", description: "An empty collection.", image: null, products: { nodes: [] } };
 const brokenCollection = { id: "gid://shopify/Collection/4", handle: "broken", title: "Shattered Archive", description: "Broken media fallback.", image: { ...image, url: "http://127.0.0.1:5173/missing-collection-art.jpg" }, products: { nodes: [] } };
+let lastAddedMerchandiseId = null;
 
 async function mockShopify(page) {
   let cartQuantity = 0;
+  let cartVariant = product.variants.nodes[0];
+  lastAddedMerchandiseId = null;
+  await page.route("**/test-product-*.svg*", async (route) => {
+    const url = route.request().url();
+    const dimensions = url.includes("portrait")
+      ? { width: 600, height: 1000, color: "#8f698f" }
+      : url.includes("landscape")
+        ? { width: 1200, height: 600, color: "#54778f" }
+        : { width: 800, height: 800, color: "#8f7654" };
+    return route.fulfill({
+      contentType: "image/svg+xml",
+      body: `<svg xmlns="http://www.w3.org/2000/svg" width="${dimensions.width}" height="${dimensions.height}" viewBox="0 0 ${dimensions.width} ${dimensions.height}"><rect width="100%" height="100%" fill="${dimensions.color}"/><path d="M0 0L${dimensions.width} ${dimensions.height}M${dimensions.width} 0L0 ${dimensions.height}" stroke="#f2dfb4" stroke-width="20"/></svg>`,
+    });
+  });
   const cart = () => ({
     id: "cart-1",
     checkoutUrl: "https://checkout.example/cart-1",
@@ -31,7 +75,7 @@ async function mockShopify(page) {
       id: "line-1",
       quantity: cartQuantity,
       merchandise: {
-        ...product.variants.nodes[0],
+        ...cartVariant,
         product: { title: product.title, handle: product.handle },
       },
     }] : [] },
@@ -41,12 +85,17 @@ async function mockShopify(page) {
   await page.route("**/graphql.json", async (route) => {
     const body = route.request().postDataJSON();
     const query = body.query;
-    if (query.includes("ProductByHandle")) return route.fulfill({ json: { data: { product } } });
-    if (query.includes("CollectionProducts")) return route.fulfill({ json: { data: { collection: { ...collection, products: { nodes: [product], pageInfo: { hasNextPage: false, endCursor: null } } } } } });
+    if (query.includes("ProductByHandle")) {
+      const requestedProduct = body.variables.handle === longTitleProduct.handle ? longTitleProduct : product;
+      return route.fulfill({ json: { data: { product: requestedProduct } } });
+    }
+    if (query.includes("CollectionProducts")) return route.fulfill({ json: { data: { collection: { ...collection, products: { nodes: [product, singleSaleProduct, regularProduct], pageInfo: { hasNextPage: false, endCursor: null } } } } } });
     if (query.includes("CollectionsList")) return route.fulfill({ json: { data: { collections: { nodes: [collection, productBackedCollection, emptyCollection, brokenCollection], pageInfo: { hasNextPage: false, endCursor: null } } } } });
-    if (query.includes("ProductsList")) return route.fulfill({ json: { data: { products: { nodes: [product], pageInfo: { hasNextPage: false, endCursor: null } } } } });
+    if (query.includes("ProductsList")) return route.fulfill({ json: { data: { products: { nodes: [product, singleSaleProduct, regularProduct], pageInfo: { hasNextPage: false, endCursor: null } } } } });
     if (query.includes("CartCreate")) return route.fulfill({ json: { data: { cartCreate: { cart: cart(), userErrors: [] } } } });
     if (query.includes("AddToCart")) {
+      lastAddedMerchandiseId = body.variables.lines[0].merchandiseId;
+      cartVariant = product.variants.nodes.find((variant) => variant.id === lastAddedMerchandiseId) || cartVariant;
       cartQuantity += body.variables.lines[0].quantity;
       return route.fulfill({ json: { data: { cartLinesAdd: { cart: cart(), userErrors: [] } } } });
     }
@@ -74,6 +123,39 @@ async function expectNoMaterialAxeViolations(page) {
   }
   expect(material, material.map((violation) => `${violation.id}: ${violation.help}`).join("\n")).toEqual([]);
   return results.violations;
+}
+
+async function getPrimaryMediaMetrics(page) {
+  return page.evaluate(() => {
+    const frame = document.querySelector(".product-primary-media");
+    const image = frame?.querySelector("img");
+    if (!frame || !image) return null;
+
+    const frameBox = frame.getBoundingClientRect();
+    const imageBox = image.getBoundingClientRect();
+    const styles = getComputedStyle(image);
+    const naturalRatio = image.naturalWidth / image.naturalHeight;
+    const containedWidth = Math.min(imageBox.width, imageBox.height * naturalRatio);
+    const containedHeight = containedWidth / naturalRatio;
+
+    return {
+      frame: { x: frameBox.x + window.scrollX, y: frameBox.y + window.scrollY, width: frameBox.width, height: frameBox.height },
+      image: { x: imageBox.x, y: imageBox.y, width: imageBox.width, height: imageBox.height },
+      natural: { width: image.naturalWidth, height: image.naturalHeight, ratio: naturalRatio },
+      contained: {
+        width: containedWidth,
+        height: containedHeight,
+        horizontalSpace: imageBox.width - containedWidth,
+        verticalSpace: imageBox.height - containedHeight,
+      },
+      objectFit: styles.objectFit,
+      objectPosition: styles.objectPosition,
+      position: styles.position,
+      currentSrc: image.currentSrc,
+      documentWidth: document.documentElement.scrollWidth,
+      viewportWidth: document.documentElement.clientWidth,
+    };
+  });
 }
 
 test.beforeEach(async ({ page }) => {
@@ -118,8 +200,8 @@ test("collection artwork follows the source priority and survives empty or broke
   await expect(collectionImage).toHaveAttribute("src", /og-image\.png/);
   await expect(collectionImage).toHaveAttribute("alt", "Celestial staff");
   const productImage = page.getByRole("link", { name: /Product-backed Relics/ }).locator("img");
-  await expect(productImage).toHaveAttribute("src", /og-image\.png/);
-  await expect(productImage).toHaveAttribute("alt", "Celestial staff");
+  await expect(productImage).toHaveAttribute("src", /test-product-portrait\.svg/);
+  await expect(productImage).toHaveAttribute("alt", portraitImage.altText);
   await expect(page.getByRole("link", { name: /Awaiting Relics/ }).locator(".collection-artwork-fallback")).toBeVisible();
 
   await page.goto("/products");
@@ -311,6 +393,177 @@ test("product purchase information is available early on mobile", async ({ page 
   await expect(page.getByRole("button", { name: "Ancient" })).toBeDisabled();
 });
 
+test("primary product media contains and centers portrait, landscape, and square gallery images", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "Gallery image geometry is exercised once at the representative mobile viewport.");
+  await page.goto("/products/celestial-staff");
+
+  const primaryImage = page.locator(".product-primary-media img");
+  const portraitButton = page.getByRole("button", { name: "View image 1 of 3" });
+  const landscapeButton = page.getByRole("button", { name: "View image 2 of 3" });
+  const squareButton = page.getByRole("button", { name: "View image 3 of 3" });
+  await expect(primaryImage).toBeVisible();
+  const initialFrame = (await getPrimaryMediaMetrics(page)).frame;
+
+  await expect(portraitButton).toHaveAttribute("aria-pressed", "true");
+  const portrait = await getPrimaryMediaMetrics(page);
+  expect(portrait.currentSrc).toContain("test-product-portrait.svg");
+  expect(portrait.natural.ratio).toBeCloseTo(0.6, 2);
+
+  await landscapeButton.focus();
+  await expect(landscapeButton).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(landscapeButton).toHaveAttribute("aria-pressed", "true");
+  await expect(primaryImage).toHaveAttribute("alt", landscapeImage.altText);
+  const landscape = await getPrimaryMediaMetrics(page);
+  expect(landscape.currentSrc).toContain("test-product-landscape.svg");
+  expect(landscape.natural.ratio).toBeCloseTo(2, 2);
+
+  await squareButton.click();
+  await expect(squareButton).toHaveAttribute("aria-pressed", "true");
+  await expect(primaryImage).toHaveAttribute("alt", squareImage.altText);
+  const square = await getPrimaryMediaMetrics(page);
+  expect(square.currentSrc).toContain("test-product-square.svg");
+  expect(square.natural.ratio).toBeCloseTo(1, 2);
+
+  for (const metrics of [portrait, landscape, square]) {
+    expect(metrics.objectFit).toBe("contain");
+    expect(metrics.objectPosition).toBe("50% 50%");
+    expect(metrics.position).toBe("absolute");
+    expect(metrics.image.width).toBeLessThanOrEqual(metrics.frame.width);
+    expect(metrics.image.height).toBeLessThanOrEqual(metrics.frame.height);
+    expect(metrics.contained.width).toBeLessThanOrEqual(metrics.image.width + 0.5);
+    expect(metrics.contained.height).toBeLessThanOrEqual(metrics.image.height + 0.5);
+    expect(Math.max(metrics.contained.horizontalSpace, metrics.contained.verticalSpace)).toBeGreaterThanOrEqual(0);
+    expect(metrics.frame.x).toBeCloseTo(initialFrame.x, 1);
+    expect(metrics.frame.y).toBeCloseTo(initialFrame.y, 1);
+    expect(metrics.frame.width).toBeCloseTo(initialFrame.width, 1);
+    expect(metrics.frame.height).toBeCloseTo(initialFrame.height, 1);
+  }
+
+  await portraitButton.click();
+  await expect(portraitButton).toHaveAttribute("aria-pressed", "true");
+  await expect(primaryImage).toHaveAttribute("alt", portraitImage.altText);
+});
+
+test("primary product media stays bounded without horizontal overflow", async ({ page }) => {
+  await page.goto("/products/celestial-staff");
+  await expect(page.locator(".product-primary-media img")).toBeVisible();
+  const metrics = await getPrimaryMediaMetrics(page);
+  const viewport = page.viewportSize();
+
+  expect(metrics).not.toBeNull();
+  expect(metrics.objectFit).toBe("contain");
+  expect(metrics.frame.width / metrics.frame.height).toBeCloseTo(4 / 3, 1);
+  expect(metrics.frame.height).toBeLessThanOrEqual(Math.min(680, viewport.height));
+  expect(metrics.image.width).toBeLessThanOrEqual(metrics.frame.width);
+  expect(metrics.image.height).toBeLessThanOrEqual(metrics.frame.height);
+  expect(metrics.documentWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1);
+  await expect(page.locator(".product-price")).toHaveAttribute("aria-label", "Sale price $120.00. Original price $150.00. Save 20 percent.");
+});
+
+test("desktop product hero balances long titles with above-the-fold purchase controls", async ({ page }, testInfo) => {
+  test.skip(!["1440px", "1920px", "2560px"].includes(testInfo.project.name), "Desktop composition is measured at large and ultrawide widths.");
+  await page.goto(`/products/${longTitleProduct.handle}`);
+  await expect(page.locator(".product-primary-media img")).toBeVisible();
+
+  const layout = await page.evaluate(() => {
+    const hero = document.querySelector(".product-purchase");
+    const media = document.querySelector(".product-primary-media");
+    const image = media?.querySelector("img");
+    const info = document.querySelector(".product-info");
+    const title = info?.querySelector("h1");
+    const price = info?.querySelector(".product-price");
+    const purchase = info?.querySelector(".purchase-controls");
+    if (!hero || !media || !image || !info || !title || !price || !purchase) return null;
+
+    const box = (element) => {
+      const rect = element.getBoundingClientRect();
+      return { x: rect.x, y: rect.y, width: rect.width, height: rect.height, right: rect.right, bottom: rect.bottom };
+    };
+    const titleStyles = getComputedStyle(title);
+    const imageStyles = getComputedStyle(image);
+
+    return {
+      hero: box(hero),
+      media: box(media),
+      image: box(image),
+      info: box(info),
+      title: box(title),
+      price: box(price),
+      purchase: box(purchase),
+      titleFontSize: Number.parseFloat(titleStyles.fontSize),
+      titleLineHeight: Number.parseFloat(titleStyles.lineHeight),
+      imageFit: imageStyles.objectFit,
+      imagePosition: imageStyles.objectPosition,
+      scrollWidth: document.documentElement.scrollWidth,
+      viewportWidth: document.documentElement.clientWidth,
+    };
+  });
+  const viewport = page.viewportSize();
+
+  expect(layout).not.toBeNull();
+  expect(layout.hero.width).toBeLessThanOrEqual(1601);
+  expect(layout.media.width).toBeGreaterThan(layout.info.width);
+  expect(layout.info.x - layout.media.right).toBeGreaterThanOrEqual(39);
+  expect(layout.info.x - layout.media.right).toBeLessThanOrEqual(81);
+  expect(layout.titleFontSize).toBeGreaterThanOrEqual(39);
+  expect(layout.titleFontSize).toBeLessThanOrEqual(58);
+  expect(layout.titleLineHeight / layout.titleFontSize).toBeLessThanOrEqual(1.05);
+  expect(layout.price.y).toBeLessThan(layout.media.bottom);
+  expect(layout.purchase.bottom).toBeLessThanOrEqual(viewport.height);
+  expect(layout.imageFit).toBe("contain");
+  expect(layout.imagePosition).toBe("50% 50%");
+  expect(layout.image.width).toBeLessThanOrEqual(layout.media.width);
+  expect(layout.image.height).toBeLessThanOrEqual(layout.media.height);
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.viewportWidth + 1);
+  await expect(page.locator(".product-price")).toHaveAttribute("aria-label", "Sale price $120.00. Original price $150.00. Save 20 percent.");
+});
+
+test("sale pricing follows the selected variant and sends its Shopify ID to cart", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "Variant pricing behavior is viewport-independent.");
+  await page.goto("/products/celestial-staff");
+
+  const price = page.locator(".product-price");
+  await expect(price).toHaveAttribute("aria-label", "Sale price $120.00. Original price $150.00. Save 20 percent.");
+  await expect(price.locator(".price-original")).toHaveText("$150.00");
+  await expect(price.locator(".price-current")).toHaveText("$120.00");
+  await expect(price.locator(".discount-badge")).toHaveText("20% OFF");
+  const salePriceHeight = (await price.boundingBox())?.height;
+
+  await page.getByRole("button", { name: "Mundane" }).click();
+  await expect(price).toHaveAttribute("aria-label", "Price $135.00.");
+  await expect(price.locator(".price-current")).toHaveText("$135.00");
+  await expect(price.locator(".price-original")).toHaveCount(0);
+  await expect(price.locator(".discount-badge")).toHaveCount(0);
+  const regularPriceHeight = (await price.boundingBox())?.height;
+  expect(regularPriceHeight).toBe(salePriceHeight);
+
+  await page.getByRole("button", { name: "Arcane" }).click();
+  await expect(price.locator(".discount-badge")).toHaveText("20% OFF");
+  await page.getByRole("button", { name: "Mundane" }).click();
+  await page.getByRole("button", { name: "Add to cart" }).click();
+  await expect(page.getByRole("dialog", { name: "Your cart (1)" })).toContainText("Mundane");
+  expect(lastAddedMerchandiseId).toBe("variant-3");
+});
+
+test("product cards show exact sales without misleading mixed-variant badges", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "Card pricing behavior is viewport-independent.");
+  await page.goto("/products");
+
+  const mixedCard = page.getByRole("link", { name: /Celestial Staff/ }).locator(".price-row");
+  await expect(mixedCard.locator(".price-original")).toHaveText("$150.00");
+  await expect(mixedCard.locator(".price-current")).toHaveText("$120.00");
+  await expect(mixedCard.locator(".discount-badge")).toHaveCount(0);
+
+  const exactSaleCard = page.getByRole("link", { name: /Moonlit Dagger/ }).locator(".price-row");
+  await expect(exactSaleCard).toHaveAttribute("aria-label", "Sale price $90.00. Original price $120.00. Save 25 percent.");
+  await expect(exactSaleCard.locator(".discount-badge")).toHaveText("25% OFF");
+
+  const regularCard = page.getByRole("link", { name: /Iron Sigil/ }).locator(".price-row");
+  await expect(regularCard).toHaveAttribute("aria-label", "Price $75.00.");
+  await expect(regularCard.locator(".price-original, .discount-badge")).toHaveCount(0);
+});
+
 test("catalog API failures preserve navigation context and offer retry", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "390px", "Failure-state behavior is viewport-independent.");
   await page.unroute("**/graphql.json");
@@ -344,7 +597,7 @@ test("catalog rendering stays within the good CLS threshold with deterministic S
     }).observe({ type: "layout-shift", buffered: true });
   });
   await page.goto("/products");
-  await expect(page.locator(".product-card:not(.skeleton-card)")).toBeVisible();
+  await expect(page.locator(".product-card:not(.skeleton-card)").first()).toBeVisible();
   await page.waitForTimeout(250);
   expect(await page.evaluate(() => window.__cls)).toBeLessThanOrEqual(0.1);
 });
