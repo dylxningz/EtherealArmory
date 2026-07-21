@@ -393,8 +393,8 @@ Large deletions were replacement-driven: the monolithic `App.jsx` behavior moved
 - Vite statically exposes every `VITE_` value to the browser. Only public Storefront/Judge.me credentials may use these names. The Storefront token must have public Storefront scopes only.
 - No Admin API calls, customer-account data, payment data, API response logging, or customer-data logging exists. Sitemap logs only a sanitized error message string; the client does not log Shopify payloads.
 - GraphQL operations use variables rather than interpolating handles/options. Catalog query parameters are constrained to known choices. Checkout redirects only to Shopify's returned URL.
-- The Formspree endpoint identifier is public routing data; submission occurs only on explicit form submit, uses a honeypot, and shows inline success/error. Live delivery remains manual.
-- Judge.me scripts use fixed HTTPS origins and public configuration. A CSP is feasible, but should begin in Report-Only because Shopify images/API, Judge.me, Formspree, and Vercel Analytics require an audited allowlist.
+- Contact inquiries submit to a same-origin Vercel function that validates requests server-side and uses server-only Resend configuration. The client shows success only after the provider accepts the message and otherwise preserves entered values with an accessible error state.
+- Judge.me scripts use fixed HTTPS origins and public configuration. A CSP is feasible, but should begin in Report-Only because Shopify images/API, Judge.me, the contact API, and Vercel Analytics require an audited allowlist.
 - `dangerouslySetInnerHTML` occurs only for Shopify-managed product description HTML. It is trusted merchant content but unsanitized; a compromised Shopify admin/content pipeline could introduce XSS.
 - Cart local storage contains only a Shopify cart ID. Announcement session storage contains only a dismissed flag.
 - No `target="_blank"` link or reverse-tabnabbing issue was found.

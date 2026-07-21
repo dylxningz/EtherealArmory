@@ -20,7 +20,6 @@ const validSubmission = {
   message: "Please build a display-ready prop.",
   originatingPage: "/contact",
   selectedOptions: JSON.stringify({ projectType: "Replica or game-inspired prop", budget: "$250–$500" }),
-  companyWebsite: "",
   submissionId: "123e4567-e89b-12d3-a456-426614174000",
 };
 
@@ -119,14 +118,6 @@ test("oversized contact payloads are rejected", async () => {
   const { handler, calls } = createHarness();
   const response = await invoke(handler, createRequest(validSubmission, { headers: { "content-length": String(40 * 1024) } }));
   assert.equal(response.statusCode, 413);
-  assert.equal(calls.length, 0);
-});
-
-test("honeypot submissions are silently accepted without sending", async () => {
-  const { handler, calls } = createHarness({ environment: {} });
-  const response = await invoke(handler, createRequest({ ...validSubmission, companyWebsite: "https://spam.example" }));
-  assert.equal(response.statusCode, 200);
-  assert.deepEqual(response.body, { ok: true });
   assert.equal(calls.length, 0);
 });
 

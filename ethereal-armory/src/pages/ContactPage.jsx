@@ -63,7 +63,6 @@ export default function ContactPage() {
       <div className="contact-layout">
         <aside className="contact-guidance"><h2>A useful brief includes</h2><ul><li>Character, object, or original concept</li><li>Reference images or artwork links</li><li>Preferred scale and intended use</li><li>Finish, color, lighting, or display goals</li><li>Deadline and working budget range</li></ul><p>Prefer email? <a href="mailto:dylangreene@etherealarmory.com">dylangreene@etherealarmory.com</a></p></aside>
         <form className="contact-form" onSubmit={submit} aria-busy={status === "submitting"}>
-          <input className="form-honeypot" type="text" name="companyWebsite" tabIndex={-1} autoComplete="off" aria-hidden="true" />
           <label>Name<input name="name" autoComplete="name" maxLength="120" required /></label>
           <label>Email<input name="email" type="email" autoComplete="email" maxLength="254" required /></label>
           <label>Phone number (optional)<input name="phone" type="tel" autoComplete="tel" maxLength="40" /></label>

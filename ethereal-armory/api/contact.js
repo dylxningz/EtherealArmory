@@ -18,7 +18,6 @@ const FIELD_LIMITS = {
   message: 5000,
   originatingPage: 500,
   selectedOptions: 1000,
-  companyWebsite: 200,
   submissionId: 128,
 };
 
@@ -74,7 +73,6 @@ export function validateContactSubmission(body) {
     Object.keys(FIELD_LIMITS).map((field) => [field, normalizeText(body[field], field)]),
   );
 
-  if (submission.companyWebsite) return { ...submission, isBot: true };
   if (!submission.email || !EMAIL_PATTERN.test(submission.email)) {
     throw new ContactRequestError(422, "Enter a valid email address.");
   }
@@ -85,7 +83,7 @@ export function validateContactSubmission(body) {
     throw new ContactRequestError(422, "The submission identifier is invalid. Refresh and try again.");
   }
 
-  return { ...submission, email: submission.email.toLowerCase(), isBot: false };
+  return { ...submission, email: submission.email.toLowerCase() };
 }
 
 function escapeHtml(value) {
@@ -159,8 +157,6 @@ export function createContactHandler({
 
     try {
       const submission = validateContactSubmission(parseBody(request));
-      if (submission.isBot) return json(response, 200, { ok: true });
-
       const environment = getEnvironment();
       const apiKey = environment.RESEND_API_KEY;
       const from = environment.CONTACT_FROM_EMAIL;
