@@ -9,20 +9,43 @@ const image = { id: "image-1", url: "http://127.0.0.1:5173/og-image.png", altTex
 const product = {
   id: "gid://shopify/Product/1", handle: "celestial-staff", title: "Celestial Staff", description: "A display-ready fantasy staff.", descriptionHtml: "<p>A display-ready fantasy staff.</p>",
   productType: "Props", vendor: "Ethereal Armory", tags: [], availableForSale: true, onlineStoreUrl: null, seo: { title: "Celestial Staff", description: "A display-ready fantasy staff." }, processingTime: null,
-  featuredImage: image, images: { nodes: [image] }, options: [{ name: "Finish", values: ["Arcane", "Ancient"] }],
+  featuredImage: image, images: { nodes: [image] }, options: [{ name: "Finish", values: ["Arcane", "Ancient", "Mundane"] }],
   priceRange: { minVariantPrice: { amount: "120.00", currencyCode: "USD" } }, compareAtPriceRange: { minVariantPrice: { amount: "150.00", currencyCode: "USD" } },
   variants: { nodes: [
     { id: "variant-1", title: "Arcane", availableForSale: true, sku: "EA-1", selectedOptions: [{ name: "Finish", value: "Arcane" }], price: { amount: "120.00", currencyCode: "USD" }, compareAtPrice: { amount: "150.00", currencyCode: "USD" }, image },
     { id: "variant-2", title: "Ancient", availableForSale: false, sku: "EA-2", selectedOptions: [{ name: "Finish", value: "Ancient" }], price: { amount: "120.00", currencyCode: "USD" }, compareAtPrice: null, image },
-  ] },
+    { id: "variant-3", title: "Mundane", availableForSale: true, sku: "EA-3", selectedOptions: [{ name: "Finish", value: "Mundane" }], price: { amount: "135.00", currencyCode: "USD" }, compareAtPrice: null, image },
+  ], pageInfo: { hasNextPage: false } },
+};
+const singleSaleProduct = {
+  ...product,
+  id: "gid://shopify/Product/2",
+  handle: "moonlit-dagger",
+  title: "Moonlit Dagger",
+  options: [{ name: "Title", values: ["Default Title"] }],
+  priceRange: { minVariantPrice: { amount: "90.00", currencyCode: "USD" } },
+  compareAtPriceRange: { minVariantPrice: { amount: "120.00", currencyCode: "USD" } },
+  variants: { nodes: [{ id: "variant-sale-only", title: "Default Title", availableForSale: true, selectedOptions: [{ name: "Title", value: "Default Title" }], price: { amount: "90.00", currencyCode: "USD" }, compareAtPrice: { amount: "120.00", currencyCode: "USD" }, image }], pageInfo: { hasNextPage: false } },
+};
+const regularProduct = {
+  ...singleSaleProduct,
+  id: "gid://shopify/Product/3",
+  handle: "iron-sigil",
+  title: "Iron Sigil",
+  priceRange: { minVariantPrice: { amount: "75.00", currencyCode: "USD" } },
+  compareAtPriceRange: { minVariantPrice: { amount: "75.00", currencyCode: "USD" } },
+  variants: { nodes: [{ id: "variant-regular", title: "Default Title", availableForSale: true, selectedOptions: [{ name: "Title", value: "Default Title" }], price: { amount: "75.00", currencyCode: "USD" }, compareAtPrice: null, image }], pageInfo: { hasNextPage: false } },
 };
 const collection = { id: "gid://shopify/Collection/1", handle: "featured", title: "Featured Relics", description: "Collector favorites.", seo: { title: "Featured Relics", description: "Collector favorites." }, image, products: { nodes: [product] } };
 const productBackedCollection = { id: "gid://shopify/Collection/2", handle: "product-backed", title: "Product-backed Relics", description: "Product artwork fallback.", image: null, products: { nodes: [product] } };
 const emptyCollection = { id: "gid://shopify/Collection/3", handle: "empty", title: "Awaiting Relics", description: "An empty collection.", image: null, products: { nodes: [] } };
 const brokenCollection = { id: "gid://shopify/Collection/4", handle: "broken", title: "Shattered Archive", description: "Broken media fallback.", image: { ...image, url: "http://127.0.0.1:5173/missing-collection-art.jpg" }, products: { nodes: [] } };
+let lastAddedMerchandiseId = null;
 
 async function mockShopify(page) {
   let cartQuantity = 0;
+  let cartVariant = product.variants.nodes[0];
+  lastAddedMerchandiseId = null;
   const cart = () => ({
     id: "cart-1",
     checkoutUrl: "https://checkout.example/cart-1",
@@ -31,7 +54,7 @@ async function mockShopify(page) {
       id: "line-1",
       quantity: cartQuantity,
       merchandise: {
-        ...product.variants.nodes[0],
+        ...cartVariant,
         product: { title: product.title, handle: product.handle },
       },
     }] : [] },
@@ -42,11 +65,13 @@ async function mockShopify(page) {
     const body = route.request().postDataJSON();
     const query = body.query;
     if (query.includes("ProductByHandle")) return route.fulfill({ json: { data: { product } } });
-    if (query.includes("CollectionProducts")) return route.fulfill({ json: { data: { collection: { ...collection, products: { nodes: [product], pageInfo: { hasNextPage: false, endCursor: null } } } } } });
+    if (query.includes("CollectionProducts")) return route.fulfill({ json: { data: { collection: { ...collection, products: { nodes: [product, singleSaleProduct, regularProduct], pageInfo: { hasNextPage: false, endCursor: null } } } } } });
     if (query.includes("CollectionsList")) return route.fulfill({ json: { data: { collections: { nodes: [collection, productBackedCollection, emptyCollection, brokenCollection], pageInfo: { hasNextPage: false, endCursor: null } } } } });
-    if (query.includes("ProductsList")) return route.fulfill({ json: { data: { products: { nodes: [product], pageInfo: { hasNextPage: false, endCursor: null } } } } });
+    if (query.includes("ProductsList")) return route.fulfill({ json: { data: { products: { nodes: [product, singleSaleProduct, regularProduct], pageInfo: { hasNextPage: false, endCursor: null } } } } });
     if (query.includes("CartCreate")) return route.fulfill({ json: { data: { cartCreate: { cart: cart(), userErrors: [] } } } });
     if (query.includes("AddToCart")) {
+      lastAddedMerchandiseId = body.variables.lines[0].merchandiseId;
+      cartVariant = product.variants.nodes.find((variant) => variant.id === lastAddedMerchandiseId) || cartVariant;
       cartQuantity += body.variables.lines[0].quantity;
       return route.fulfill({ json: { data: { cartLinesAdd: { cart: cart(), userErrors: [] } } } });
     }
@@ -309,6 +334,51 @@ test("product purchase information is available early on mobile", async ({ page 
     expect(box.y).toBeLessThan(900);
   }
   await expect(page.getByRole("button", { name: "Ancient" })).toBeDisabled();
+});
+
+test("sale pricing follows the selected variant and sends its Shopify ID to cart", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "Variant pricing behavior is viewport-independent.");
+  await page.goto("/products/celestial-staff");
+
+  const price = page.locator(".product-price");
+  await expect(price).toHaveAttribute("aria-label", "Sale price $120.00. Original price $150.00. Save 20 percent.");
+  await expect(price.locator(".price-original")).toHaveText("$150.00");
+  await expect(price.locator(".price-current")).toHaveText("$120.00");
+  await expect(price.locator(".discount-badge")).toHaveText("20% OFF");
+  const salePriceHeight = (await price.boundingBox())?.height;
+
+  await page.getByRole("button", { name: "Mundane" }).click();
+  await expect(price).toHaveAttribute("aria-label", "Price $135.00.");
+  await expect(price.locator(".price-current")).toHaveText("$135.00");
+  await expect(price.locator(".price-original")).toHaveCount(0);
+  await expect(price.locator(".discount-badge")).toHaveCount(0);
+  const regularPriceHeight = (await price.boundingBox())?.height;
+  expect(regularPriceHeight).toBe(salePriceHeight);
+
+  await page.getByRole("button", { name: "Arcane" }).click();
+  await expect(price.locator(".discount-badge")).toHaveText("20% OFF");
+  await page.getByRole("button", { name: "Mundane" }).click();
+  await page.getByRole("button", { name: "Add to cart" }).click();
+  await expect(page.getByRole("dialog", { name: "Your cart (1)" })).toContainText("Mundane");
+  expect(lastAddedMerchandiseId).toBe("variant-3");
+});
+
+test("product cards show exact sales without misleading mixed-variant badges", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "Card pricing behavior is viewport-independent.");
+  await page.goto("/products");
+
+  const mixedCard = page.getByRole("link", { name: /Celestial Staff/ }).locator(".price-row");
+  await expect(mixedCard.locator(".price-original")).toHaveText("$150.00");
+  await expect(mixedCard.locator(".price-current")).toHaveText("$120.00");
+  await expect(mixedCard.locator(".discount-badge")).toHaveCount(0);
+
+  const exactSaleCard = page.getByRole("link", { name: /Moonlit Dagger/ }).locator(".price-row");
+  await expect(exactSaleCard).toHaveAttribute("aria-label", "Sale price $90.00. Original price $120.00. Save 25 percent.");
+  await expect(exactSaleCard.locator(".discount-badge")).toHaveText("25% OFF");
+
+  const regularCard = page.getByRole("link", { name: /Iron Sigil/ }).locator(".price-row");
+  await expect(regularCard).toHaveAttribute("aria-label", "Price $75.00.");
+  await expect(regularCard.locator(".price-original, .discount-badge")).toHaveCount(0);
 });
 
 test("catalog API failures preserve navigation context and offer retry", async ({ page }, testInfo) => {

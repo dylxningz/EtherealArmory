@@ -107,6 +107,11 @@ async function shopifyFetch(query, variables = {}, { retry = true, signal } = {}
   throw lastError;
 }
 
+const VARIANT_PRICING_FIELDS = `
+  price { amount currencyCode }
+  compareAtPrice { amount currencyCode }
+`;
+
 const PRODUCT_CARD_FIELDS = `
   id
   handle
@@ -118,6 +123,14 @@ const PRODUCT_CARD_FIELDS = `
   featuredImage { id url altText width height }
   priceRange { minVariantPrice { amount currencyCode } }
   compareAtPriceRange { minVariantPrice { amount currencyCode } }
+  variants(first: 100) {
+    nodes {
+      id
+      availableForSale
+      ${VARIANT_PRICING_FIELDS}
+    }
+    pageInfo { hasNextPage }
+  }
 `;
 
 const CART_FIELDS = `
@@ -135,8 +148,7 @@ const CART_FIELDS = `
           availableForSale
           image { url altText width height }
           product { title handle }
-          price { amount currencyCode }
-          compareAtPrice { amount currencyCode }
+          ${VARIANT_PRICING_FIELDS}
         }
       }
     }
@@ -156,8 +168,7 @@ const PRODUCT_QUERY = `
         nodes {
           id title availableForSale sku
           selectedOptions { name value }
-          price { amount currencyCode }
-          compareAtPrice { amount currencyCode }
+          ${VARIANT_PRICING_FIELDS}
           image { id url altText width height }
         }
       }

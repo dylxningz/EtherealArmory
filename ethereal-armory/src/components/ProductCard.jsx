@@ -1,9 +1,10 @@
 import { ThemeLink as Link } from "./ThemeLinks";
-import { formatMoney, getSalePricing } from "../lib/pricing";
+import PricePresentation from "./PricePresentation";
+import { getProductCardPricing } from "../lib/pricing";
 import { shopifyImageUrl, shopifySrcSet } from "../lib/images";
 
 export default function ProductCard({ product, eager = false }) {
-  const pricing = getSalePricing(product.priceRange?.minVariantPrice, product.compareAtPriceRange?.minVariantPrice);
+  const pricing = getProductCardPricing(product);
   const image = product.featuredImage;
 
   return (
@@ -31,10 +32,7 @@ export default function ProductCard({ product, eager = false }) {
         <div className="product-card-copy">
           <p className="overline">{product.productType || "Collector piece"}</p>
           <h3>{product.title}</h3>
-          <div className="price-row" aria-label={pricing.isOnSale ? `Sale price ${formatMoney(pricing.finalPrice, pricing.currencyCode)}, originally ${formatMoney(pricing.originalPrice, pricing.currencyCode)}` : undefined}>
-            <span className={pricing.isOnSale ? "sale-price" : "price"}>{formatMoney(pricing.finalPrice, pricing.currencyCode)}</span>
-            {pricing.isOnSale && <del>{formatMoney(pricing.originalPrice, pricing.currencyCode)}</del>}
-          </div>
+          <PricePresentation pricing={pricing} className="price-row" showPercentOff={pricing.showPercentOff} />
         </div>
       </Link>
     </article>

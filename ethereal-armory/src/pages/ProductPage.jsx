@@ -3,12 +3,13 @@ import { useParams } from "react-router-dom";
 import { ThemeLink as Link } from "../components/ThemeLinks";
 import Seo, { SITE_URL } from "../components/Seo";
 import ProductCard from "../components/ProductCard";
+import PricePresentation from "../components/PricePresentation";
 import JudgeMeReviews from "../components/JudgeMeReviews";
 import { ErrorState } from "../components/AsyncState";
 import { useCart } from "../context/useCart";
 import { getProductByHandle, getProductsPage } from "../lib/shopify";
 import { clampQuantity, isOptionValueAvailable, resolveVariant } from "../lib/commerce";
-import { formatMoney, getSalePricing } from "../lib/pricing";
+import { getSalePricing } from "../lib/pricing";
 import { shopifyImageUrl, shopifySrcSet } from "../lib/images";
 import "./ProductPage.css";
 
@@ -120,16 +121,12 @@ export default function ProductPage() {
       <section className="product-purchase section-shell">
         <div className="product-primary-media">
           {image?.url ? <img src={shopifyImageUrl(image.url, 1200)} srcSet={shopifySrcSet(image.url, [480, 720, 960, 1200, 1600])} sizes="(max-width: 900px) 100vw, 56vw" width={image.width || 1200} height={image.height || 1200} alt={image.altText || product.title} fetchPriority="high" /> : <span className="image-placeholder" aria-hidden="true">◇</span>}
-          {pricing.isOnSale && <span className="sale-badge">{pricing.percentOff}% off</span>}
         </div>
 
         <div className="product-info">
           <p className="overline">{product.productType || "Collector piece"}</p>
           <h1>{product.title}</h1>
-          <div className="product-price" aria-label={pricing.isOnSale ? `Sale price ${formatMoney(pricing.finalPrice, pricing.currencyCode)}, originally ${formatMoney(pricing.originalPrice, pricing.currencyCode)}` : undefined}>
-            <span>{formatMoney(pricing.finalPrice, pricing.currencyCode)}</span>
-            {pricing.isOnSale && <del>{formatMoney(pricing.originalPrice, pricing.currencyCode)}</del>}
-          </div>
+          <PricePresentation pricing={pricing} className="product-price" />
           <p className={`stock-status ${selectedVariant?.availableForSale ? "available" : "unavailable"}`}><span aria-hidden="true" />{selectedVariant ? (selectedVariant.availableForSale ? "Available to order" : "Selected option is sold out") : "This combination is unavailable"}</p>
 
           {product.options.filter((option) => option.name !== "Title" && !(option.values.length === 1 && option.values[0] === "Default Title")).map((option) => (
