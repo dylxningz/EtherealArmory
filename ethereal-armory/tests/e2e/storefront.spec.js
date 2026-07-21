@@ -20,6 +20,12 @@ const product = {
     { id: "variant-3", title: "Mundane", availableForSale: true, sku: "EA-3", selectedOptions: [{ name: "Finish", value: "Mundane" }], price: { amount: "135.00", currencyCode: "USD" }, compareAtPrice: null, image: portraitImage },
   ], pageInfo: { hasNextPage: false } },
 };
+const longTitleProduct = {
+  ...product,
+  handle: "clear-dagger-layout-test",
+  title: "Clear Dagger - Cloak & Dagger Inspired (Marvel Rivals - Healing Dagger) | Clear 3D Printed Resin Prop",
+  seo: { title: "Clear Dagger", description: "A clear resin healing dagger display prop." },
+};
 const singleSaleProduct = {
   ...product,
   id: "gid://shopify/Product/2",
@@ -79,7 +85,10 @@ async function mockShopify(page) {
   await page.route("**/graphql.json", async (route) => {
     const body = route.request().postDataJSON();
     const query = body.query;
-    if (query.includes("ProductByHandle")) return route.fulfill({ json: { data: { product } } });
+    if (query.includes("ProductByHandle")) {
+      const requestedProduct = body.variables.handle === longTitleProduct.handle ? longTitleProduct : product;
+      return route.fulfill({ json: { data: { product: requestedProduct } } });
+    }
     if (query.includes("CollectionProducts")) return route.fulfill({ json: { data: { collection: { ...collection, products: { nodes: [product, singleSaleProduct, regularProduct], pageInfo: { hasNextPage: false, endCursor: null } } } } } });
     if (query.includes("CollectionsList")) return route.fulfill({ json: { data: { collections: { nodes: [collection, productBackedCollection, emptyCollection, brokenCollection], pageInfo: { hasNextPage: false, endCursor: null } } } } });
     if (query.includes("ProductsList")) return route.fulfill({ json: { data: { products: { nodes: [product, singleSaleProduct, regularProduct], pageInfo: { hasNextPage: false, endCursor: null } } } } });
@@ -449,6 +458,64 @@ test("primary product media stays bounded without horizontal overflow", async ({
   expect(metrics.image.width).toBeLessThanOrEqual(metrics.frame.width);
   expect(metrics.image.height).toBeLessThanOrEqual(metrics.frame.height);
   expect(metrics.documentWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1);
+  await expect(page.locator(".product-price")).toHaveAttribute("aria-label", "Sale price $120.00. Original price $150.00. Save 20 percent.");
+});
+
+test("desktop product hero balances long titles with above-the-fold purchase controls", async ({ page }, testInfo) => {
+  test.skip(!["1440px", "1920px", "2560px"].includes(testInfo.project.name), "Desktop composition is measured at large and ultrawide widths.");
+  await page.goto(`/products/${longTitleProduct.handle}`);
+  await expect(page.locator(".product-primary-media img")).toBeVisible();
+
+  const layout = await page.evaluate(() => {
+    const hero = document.querySelector(".product-purchase");
+    const media = document.querySelector(".product-primary-media");
+    const image = media?.querySelector("img");
+    const info = document.querySelector(".product-info");
+    const title = info?.querySelector("h1");
+    const price = info?.querySelector(".product-price");
+    const purchase = info?.querySelector(".purchase-controls");
+    if (!hero || !media || !image || !info || !title || !price || !purchase) return null;
+
+    const box = (element) => {
+      const rect = element.getBoundingClientRect();
+      return { x: rect.x, y: rect.y, width: rect.width, height: rect.height, right: rect.right, bottom: rect.bottom };
+    };
+    const titleStyles = getComputedStyle(title);
+    const imageStyles = getComputedStyle(image);
+
+    return {
+      hero: box(hero),
+      media: box(media),
+      image: box(image),
+      info: box(info),
+      title: box(title),
+      price: box(price),
+      purchase: box(purchase),
+      titleFontSize: Number.parseFloat(titleStyles.fontSize),
+      titleLineHeight: Number.parseFloat(titleStyles.lineHeight),
+      imageFit: imageStyles.objectFit,
+      imagePosition: imageStyles.objectPosition,
+      scrollWidth: document.documentElement.scrollWidth,
+      viewportWidth: document.documentElement.clientWidth,
+    };
+  });
+  const viewport = page.viewportSize();
+
+  expect(layout).not.toBeNull();
+  expect(layout.hero.width).toBeLessThanOrEqual(1601);
+  expect(layout.media.width).toBeGreaterThan(layout.info.width);
+  expect(layout.info.x - layout.media.right).toBeGreaterThanOrEqual(39);
+  expect(layout.info.x - layout.media.right).toBeLessThanOrEqual(81);
+  expect(layout.titleFontSize).toBeGreaterThanOrEqual(39);
+  expect(layout.titleFontSize).toBeLessThanOrEqual(58);
+  expect(layout.titleLineHeight / layout.titleFontSize).toBeLessThanOrEqual(1.05);
+  expect(layout.price.y).toBeLessThan(layout.media.bottom);
+  expect(layout.purchase.bottom).toBeLessThanOrEqual(viewport.height);
+  expect(layout.imageFit).toBe("contain");
+  expect(layout.imagePosition).toBe("50% 50%");
+  expect(layout.image.width).toBeLessThanOrEqual(layout.media.width);
+  expect(layout.image.height).toBeLessThanOrEqual(layout.media.height);
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.viewportWidth + 1);
   await expect(page.locator(".product-price")).toHaveAttribute("aria-label", "Sale price $120.00. Original price $150.00. Save 20 percent.");
 });
 
