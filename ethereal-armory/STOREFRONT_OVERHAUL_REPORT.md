@@ -34,7 +34,7 @@ Route content → Seo component → canonical/meta/social/JSON-LD
 /sitemap.xml → Vercel rewrite → api/sitemap.js → Shopify handles
 ```
 
-Shopify remains authoritative for products, collections, availability, variants, currency, compare-at pricing, cart cost, and checkout. Formspree remains the commission-form transport, Judge.me remains the review provider, and Vercel remains the build/runtime host.
+Shopify remains authoritative for products, collections, availability, variants, currency, compare-at pricing, cart cost, and checkout. A Vercel serverless function and Resend handle commission-form email, Judge.me remains the review provider, and Vercel remains the build/runtime host.
 
 ## 3. Route map
 
@@ -173,7 +173,7 @@ The automated home check reports zero serious or critical axe violations. Judge.
 8. Optional processing-time copy is stored in product metafield `custom.processing_time`; otherwise generic wording is shown.
 9. Shipping profiles, rates, tax collection, inventory policy, return policy, and checkout branding are current in Shopify.
 10. Judge.me shop domain/public token are available in both environments and the storefront domain is authorized.
-11. Formspree form `mojkodab` is active, routes to the intended inbox, and has spam controls configured.
+11. The Resend sender is verified, the Vercel contact variables are configured, and inquiries route to the intended inbox.
 12. `www.etherealarmory.com` remains canonical. The apex currently redirects to `www`.
 
 ## 11. Vercel and SEO notes
@@ -216,7 +216,7 @@ Results:
 4. Push `storefront-platform-overhaul` and create a Vercel Preview only; do not promote it.
 5. Test home, all-products, at least one collection, available product, sold-out/invalid variant, cart add/update/remove, checkout handoff, contact form, policy links, robots, sitemap, and unknown route.
 6. Validate Shopify checkout currency, discounts, shipping, tax, inventory, and order creation using a permitted test order.
-7. Confirm Judge.me rendering and Formspree delivery.
+7. Confirm Judge.me rendering and Resend-backed contact delivery.
 8. Run Lighthouse and rich-results/social-card validators against the preview URL.
 9. Obtain approval, then merge into the production branch identified in Vercel.
 
@@ -227,11 +227,11 @@ No Shopify schema or data migration is involved. Rollback is therefore applicati
 1. Redeploy the last known-good Vercel deployment or revert the overhaul commit(s).
 2. Keep Shopify products, collections, carts, inventory, and checkout unchanged.
 3. If the sitemap Function alone fails, remove the `/sitemap.xml` rewrite and redeploy; storefront routes remain independent.
-4. If a third-party integration fails, disable only the affected Judge.me/Formspree client integration while preserving Shopify commerce.
+4. If a third-party integration fails, isolate the affected Judge.me or contact-email integration while preserving Shopify commerce.
 
 ## 15. Remaining non-blocking work
 
-- Verify all manual Shopify/Vercel/Judge.me/Formspree settings above.
+- Verify all manual Shopify, Vercel, Judge.me, and Resend settings above.
 - Add richer collection imagery and consistent product taxonomy/alt text in Shopify.
 - Consider a later prerendering layer if per-product metadata for non-JavaScript social crawlers becomes a priority.
 - Consider a true HTTP 404 edge strategy only if analytics show material crawler/SEO impact; it is not worth migrating frameworks for this alone.
@@ -245,7 +245,7 @@ This section records the production-commerce release review requested after the 
 | Target | Verdict | Conditions |
 |---|---|---|
 | Vercel Preview | **Safe for Preview after release packaging** | No application-code blocker remains. At audit time the overhaul was entirely uncommitted; release packaging must commit only reviewed paths, remove `.env` from tracking without deleting it locally, and confirm the Vercel project, root, Node version, Preview variables, and branch target before pushing. |
-| Production | **Not safe for Production yet** | A real Vercel Preview has not been created or approved. Brand, business/policy copy, automatic discount behavior, Formspree delivery, Judge.me rendering, Vercel routing, sitemap output, environment scopes, and an allowed checkout test still require owner verification. |
+| Production | **Not safe for Production yet** | A real Vercel Preview has not been created or approved. Brand, business/policy copy, automatic discount behavior, contact-email delivery, Judge.me rendering, Vercel routing, sitemap output, environment scopes, and an allowed checkout test still require owner verification. |
 
 There are no known critical code defects remaining. The production verdict is deliberately conservative because several release and business facts cannot be established from the local repository.
 
@@ -265,7 +265,7 @@ There are no known critical code defects remaining. The production verdict is de
 
 The repository root is the parent `EtherealArmory` directory, while the app is in `ethereal-armory`. Therefore Vercel must use `ethereal-armory` as its Root Directory when connected to the parent repository.
 
-Secret review covered the working diff and relevant repository history. No credible private-key block, Shopify Admin/private token, Vercel credential, Formspree secret, customer record, or private service credential was found. A generic AWS-key-pattern scan produced one false positive inside the 3,422,909-character embedded raster-data line in the deleted `src/assets/MAINLOGO.svg`; it is encoded image data, not a plaintext credential. `.env` was historically tracked; release packaging removes it from Git tracking, adds `.env` patterns to `.gitignore`, and adds a placeholder-only `.env.example` while leaving local values intact. Its current values were not printed. All current variables use Vite's public `VITE_` namespace; this is appropriate only for a Shopify Storefront public token and Judge.me public token. Dylan must verify those scopes and must never place an Admin API token, private Judge.me token, or other secret in a `VITE_` variable.
+Secret review covered the working diff and relevant repository history. No credible private-key block, Shopify Admin/private token, Vercel credential, Resend credential, customer record, or private service credential was found. A generic AWS-key-pattern scan produced one false positive inside the 3,422,909-character embedded raster-data line in the deleted `src/assets/MAINLOGO.svg`; it is encoded image data, not a plaintext credential. `.env` was historically tracked; release packaging removes it from Git tracking, adds `.env` patterns to `.gitignore`, and adds a placeholder-only `.env.example` while leaving local values intact. Its current values were not printed. Shopify Storefront and Judge.me public configuration use Vite's public `VITE_` namespace; Resend and contact-email values use server-only variables without a `VITE_` prefix. Dylan must verify public-token scopes and must never place an Admin API token, Resend API key, private Judge.me token, or other secret in a `VITE_` variable.
 
 ### 16.3 Architecture and complete changed-file review
 
@@ -311,14 +311,14 @@ The runtime remains React 19 + Vite 8 on Vercel. `BrowserRouter` renders a lazy 
 | `src/pages/ProductPage.jsx`, `src/pages/ProductPage.css` | Product fetch, exact variants, price/image/availability sync, quantity, add/buy, details, gallery, Judge.me, policies, and related products. Live selection/cart path verified. |
 | `src/pages/PortfolioPage.jsx` | Portfolio cards and modal. Review corrected inert targeting and restored shared CTA/link styling. |
 | `src/pages/AboutPage.jsx` | Studio story, brand panel, and values. Technically correct; claims require owner approval. |
-| `src/pages/ContactPage.jsx` | Commission guidance and Formspree form. Review fixed the post-await form reference; mocked success/reset and failure behavior are covered. |
+| `src/pages/ContactPage.jsx` | Commission guidance and same-origin contact form. Confirmed success/reset, failure preservation, duplicate prevention, and accessible status behavior are covered. |
 | `src/pages/NotFoundPage.jsx` | Branded client 404 with `noindex,follow`. Correct within the known SPA HTTP-200 limitation. |
 | `src/pages/PrivacyPolicyPage.jsx`, `TermsPage.jsx`, `ShippingPolicyPage.jsx`, `ReturnsPolicyPage.jsx` | Semantic policy routes and metadata. Technically correct; legal/business substance requires Dylan's approval. |
 | `src/index.css` | Consolidated tokens, shell, shared components, home/editorial/contact/policy/portfolio styles, responsive rules, focus, and reduced motion. Review restored legacy class aliases used by portfolio/policy content. |
 | `playwright.config.js` | Exact required viewport projects: 320x568, 375x667, 390x844, 430x932, 768x1024, 1024x768, and 1440x900. |
 | `tests/unit/cart.test.js`, `tests/unit/commerce.test.js` | Cart recovery/mutations, pricing, variants, URL state, quantities, and scroll behavior. Correct and passing. |
 | `tests/unit/sitemap.test.js` | Added review coverage for more than ten pages, repeated cursors, XML escaping, content type, safe fallback, and method rejection. |
-| `tests/e2e/storefront.spec.js` | Expanded route, responsive, failure, accessibility, focus, Formspree, history, CLS, screenshots, and keyboard-checkout coverage. |
+| `tests/e2e/storefront.spec.js` | Expanded route, responsive, failure, accessibility, focus, contact-email, history, CLS, screenshots, and keyboard-checkout coverage. |
 | `tests/e2e/live-review.spec.js` | Opt-in live Shopify rendering/transfer probe. It now requires loaded commerce content rather than mistaking an API error state for a performance sample. Preview-network metrics remain outstanding. |
 | `STOREFRONT_OVERHAUL_REPORT.md` | Architecture, implementation, and this release review. |
 
@@ -329,7 +329,7 @@ Large deletions were replacement-driven: the monolithic `App.jsx` behavior moved
 | Defect | Smallest safe fix | Regression evidence |
 |---|---|---|
 | Sitemap silently stopped after ten 250-item pages | Continue until `hasNextPage` is false; reject missing/repeated cursors | 11-page and repeated-cursor unit tests |
-| Contact success could throw because React's event target was read after `await` | Capture the form before awaiting and reset that reference | Mocked Formspree success/reset browser test |
+| Contact success could throw because React's event target was read after `await` | Capture the form before awaiting and reset that reference | Mocked API success/reset browser test |
 | Portfolio modal left content in the same `main` interactive | Supply page-specific inert siblings | Inert-property browser test |
 | Portfolio/policy CTA classes lost shared styles, producing weak touch targets | Alias the existing classes into the shared design primitives | 44 px CTA assertion and corrected screenshot |
 | Live Shopify showed an automatic cart discount while copy implied a different application point | State only that eligible Shopify offers appear in cart or checkout; explain subtotal | Live $12.99 to $11.70 observation plus cart copy test |
@@ -345,7 +345,7 @@ Large deletions were replacement-driven: the monolithic `App.jsx` behavior moved
 | High | Vercel project identity, Production branch, domain assignment, and Preview/Production variables are unavailable locally | Must verify before Preview; never push this branch to a Production-tracked branch. |
 | High | Brand mark is a simplified reinterpretation of the original, not a faithful optimized copy | Dylan must approve before production. |
 | High | Business, policy, craftsmanship, IP/licensing, shipping, returns, commission, and automatic-discount claims are not technically provable | Dylan must approve before production. |
-| High | Live Formspree delivery and visible Judge.me widget population were not exercised | Must verify in Preview to avoid sending test messages or relying on local domain authorization. |
+| High | Live contact-email delivery and visible Judge.me widget population were not exercised | Must verify in Preview to avoid sending test messages or relying on local domain authorization. |
 | Medium | Catalog filters apply only to products loaded so far; load-more lacks duplicate-node/repeated-cursor/stale-response guards | Current store has 18 products and no second page, so this does not block Preview. Fix before the catalog exceeds 24 products or before relying on complete client-side filtering. |
 | Medium | Product variants are limited to first 100 and cart lines to first 50 | Current observed product has few variants and normal carts are far below the cap. Verify catalog limits; paginate before those limits can be reached. |
 | Medium | Sitemap has complete cursor pagination but no explicit upstream timeout and can make many requests for a very large catalog | Current 18-product/4-collection store is safe. Add a bounded fetch timeout/function-duration strategy before material catalog scale. |
@@ -393,8 +393,8 @@ Large deletions were replacement-driven: the monolithic `App.jsx` behavior moved
 - Vite statically exposes every `VITE_` value to the browser. Only public Storefront/Judge.me credentials may use these names. The Storefront token must have public Storefront scopes only.
 - No Admin API calls, customer-account data, payment data, API response logging, or customer-data logging exists. Sitemap logs only a sanitized error message string; the client does not log Shopify payloads.
 - GraphQL operations use variables rather than interpolating handles/options. Catalog query parameters are constrained to known choices. Checkout redirects only to Shopify's returned URL.
-- The Formspree endpoint identifier is public routing data; submission occurs only on explicit form submit, uses a honeypot, and shows inline success/error. Live delivery remains manual.
-- Judge.me scripts use fixed HTTPS origins and public configuration. A CSP is feasible, but should begin in Report-Only because Shopify images/API, Judge.me, Formspree, and Vercel Analytics require an audited allowlist.
+- Contact inquiries submit to a same-origin Vercel function that validates requests server-side and uses server-only Resend configuration. The client shows success only after the provider accepts the message and otherwise preserves entered values with an accessible error state.
+- Judge.me scripts use fixed HTTPS origins and public configuration. A CSP is feasible, but should begin in Report-Only because Shopify images/API, Judge.me, the contact API, and Vercel Analytics require an audited allowlist.
 - `dangerouslySetInnerHTML` occurs only for Shopify-managed product description HTML. It is trusted merchant content but unsanitized; a compromised Shopify admin/content pipeline could introduce XSS.
 - Cart local storage contains only a Shopify cart ID. Announcement session storage contains only a dismissed flag.
 - No `target="_blank"` link or reverse-tabnabbing issue was found.
@@ -489,7 +489,7 @@ The first three are also read by the sitemap Function at runtime. Vite embeds al
 2. Home, all-products, every collection, one multi-option product, unavailable option, URL filters, Back/Forward, cart add/update/remove/refresh, and Shopify checkout handoff.
 3. `/sitemap.xml` returns XML and dynamic product/collection URLs; `/api/sitemap`, `/robots.txt`, static assets, deep-link refresh, cache headers, and client 404 behave as intended.
 4. Route title/description/canonical/OG/Twitter/JSON-LD changes; validate product Rich Results and social cards.
-5. Formspree reaches the intended inbox with spam controls; Judge.me loads reviews on the authorized Preview domain.
+5. The contact API reaches the intended inbox through Resend; Judge.me loads reviews on the authorized Preview domain.
 6. Shopify automatic discount, currency, tax/shipping transition, inventory rejection, and an allowed test order/refund workflow.
 7. Lighthouse mobile cold-cache home/catalog/product runs; LCP, CLS, INP, request counts, and Shopify image bytes.
 8. Keyboard-only flow, 200% zoom, mobile keyboard, screen reader smoke test, contrast, reduced motion, and third-party widget accessibility.
@@ -599,5 +599,5 @@ The portfolio capture is a 390 px-wide full-page image after the CTA/inert fixes
 4. Confirm the rollback build SHA and smoke-test home, product, collection, cart, checkout handoff, robots, and sitemap.
 5. Shopify products, inventory, carts, orders, and checkout remain untouched; no data migration needs reversal.
 6. If only the sitemap fails, revert/disable the sitemap rewrite/function in a small hotfix while leaving SPA commerce routes intact.
-7. If only Judge.me or Formspree fails, disable or correct that integration in a separately reviewed hotfix; do not roll back Shopify commerce data.
+7. If only Judge.me or contact-email delivery fails, isolate or correct that integration in a separately reviewed hotfix; do not roll back Shopify commerce data.
 8. Document the incident, affected SHA, rollback deployment, customer impact, and required regression test before attempting another release.
