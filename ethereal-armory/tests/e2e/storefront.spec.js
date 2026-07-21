@@ -637,16 +637,102 @@ test("home has no serious or critical automated accessibility violations", async
   await expectNoMaterialAxeViolations(page);
 });
 
-test("contact form reports a successful Formspree response and resets fields", async ({ page }, testInfo) => {
+test("contact form reports accepted email delivery, resets fields, and focuses status", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "390px", "Form behavior is viewport-independent.");
-  await page.route("https://formspree.io/**", (route) => route.fulfill({ status: 200, json: { ok: true } }));
+  let submittedPayload = null;
+  await page.route("**/api/contact", async (route) => {
+    submittedPayload = route.request().postDataJSON();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    return route.fulfill({ status: 202, json: { ok: true, accepted: true, id: "email_test_123" } });
+  });
   await page.goto("/contact");
   await page.getByLabel("Name").fill("Preview Reviewer");
   await page.getByLabel("Email").fill("preview@example.com");
+  await page.getByLabel("Phone number (optional)").fill("555-0100");
+  await page.getByLabel("Project type").selectOption({ label: "Replica or game-inspired prop" });
+  await page.getByLabel("Item or character inspiration").fill("Preview delivery test dagger");
+  await page.getByLabel("Size or dimensions").fill("18 inches");
+  await page.getByLabel("Material or finish preferences").fill("Antique silver");
+  await page.getByLabel("Budget range").selectOption({ label: "$250–$500" });
+  await page.getByLabel("Desired deadline").fill("October 2026");
   await page.getByLabel("Project details").fill("Testing the preview inquiry flow.");
-  await page.getByRole("button", { name: "Send commission inquiry" }).click();
-  await expect(page.getByText("Your inquiry has been sent.", { exact: false })).toBeVisible();
+  const submitButton = page.getByRole("button", { name: "Send commission inquiry" });
+  await submitButton.click();
+  await expect(page.getByRole("button", { name: "Sending inquiry…" })).toBeDisabled();
+  const status = page.getByRole("status");
+  await expect(status).toContainText("Your inquiry has been sent.");
+  await expect(status).toBeFocused();
   await expect(page.getByLabel("Name")).toHaveValue("");
+  expect(submittedPayload.email).toBe("preview@example.com");
+  expect(submittedPayload.message).toBe("Testing the preview inquiry flow.");
+  expect(submittedPayload.originatingPage).toBe("/contact");
+  expect(submittedPayload.submissionId).toMatch(/^[a-zA-Z0-9][a-zA-Z0-9/_-]{7,127}$/);
+});
+
+test("contact form preserves values and never shows success when email delivery fails", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "Form failure behavior is viewport-independent.");
+  await page.route("**/api/contact", (route) => route.fulfill({ status: 502, json: { ok: false, message: "The inquiry could not be sent." } }));
+  await page.goto("/contact");
+  await page.getByLabel("Name").fill("Failure State Reviewer");
+  await page.getByLabel("Email").fill("failure@example.com");
+  await page.getByLabel("Project details").fill("Keep these project details after failure.");
+  await page.getByRole("button", { name: "Send commission inquiry" }).click();
+
+  const alert = page.getByRole("alert");
+  await expect(alert).toContainText("The inquiry could not be sent.");
+  await expect(alert).toBeFocused();
+  await expect(page.getByText("Your inquiry has been sent.", { exact: false })).toHaveCount(0);
+  await expect(page.getByLabel("Name")).toHaveValue("Failure State Reviewer");
+  await expect(page.getByLabel("Email")).toHaveValue("failure@example.com");
+  await expect(page.getByLabel("Project details")).toHaveValue("Keep these project details after failure.");
+});
+
+test("contact form prevents repeated submit events from creating duplicate requests", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "Duplicate protection is viewport-independent.");
+  let requestCount = 0;
+  let releaseRequest;
+  const requestGate = new Promise((resolve) => { releaseRequest = resolve; });
+  await page.route("**/api/contact", async (route) => {
+    requestCount += 1;
+    await requestGate;
+    return route.fulfill({ status: 202, json: { ok: true, accepted: true, id: "email_test_once" } });
+  });
+  await page.goto("/contact");
+  await page.getByLabel("Name").fill("Duplicate Reviewer");
+  await page.getByLabel("Email").fill("duplicate@example.com");
+  await page.getByLabel("Project details").fill("This should create one request.");
+  await page.locator(".contact-form").evaluate((form) => {
+    form.requestSubmit();
+    form.requestSubmit();
+  });
+
+  await expect(page.getByRole("button", { name: "Sending inquiry…" })).toBeDisabled();
+  await expect.poll(() => requestCount).toBe(1);
+  releaseRequest();
+  await expect(page.getByRole("status")).toContainText("Your inquiry has been sent.");
+  expect(requestCount).toBe(1);
+});
+
+test("contact form remains usable without horizontal overflow", async ({ page }) => {
+  await page.goto("/contact");
+  const form = page.locator(".contact-form");
+  await expect(form).toBeVisible();
+  const metrics = await form.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const submit = element.querySelector('button[type="submit"]').getBoundingClientRect();
+    return {
+      left: box.left,
+      right: box.right,
+      width: box.width,
+      submitHeight: submit.height,
+      documentWidth: document.documentElement.scrollWidth,
+      viewportWidth: document.documentElement.clientWidth,
+    };
+  });
+  expect(metrics.left).toBeGreaterThanOrEqual(0);
+  expect(metrics.right).toBeLessThanOrEqual(metrics.viewportWidth + 1);
+  expect(metrics.submitHeight).toBeGreaterThanOrEqual(44);
+  expect(metrics.documentWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1);
 });
 
 test("portfolio replaces the old project gallery with an accessible construction experience", async ({ page }, testInfo) => {
