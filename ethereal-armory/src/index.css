@@ -227,7 +227,9 @@ p { line-height: 1.7; color: var(--muted); }
 .collection-card:hover { border-color: rgba(210, 173, 104, 0.55); transform: translateY(-4px); }
 .collection-card-media { aspect-ratio: 5 / 4; background: #101015; overflow: hidden; }
 .collection-card-media img { width: 100%; height: 100%; object-fit: cover; transition: transform 500ms var(--ease); }
-.collection-artwork-fallback { position: relative; display: grid; width: 100%; height: 100%; place-items: center; background: radial-gradient(circle at 50% 38%, rgba(113, 75, 139, 0.22), transparent 42%), #0f0f15; overflow: hidden; }
+.collection-artwork-frame { display: block; width: 100%; height: 100%; min-width: 0; min-height: 0; background: #101015; overflow: hidden; }
+.collection-artwork-image { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.collection-artwork-fallback { position: relative; display: grid; width: 100%; height: 100%; min-height: 0; place-items: center; background: radial-gradient(circle at 50% 38%, rgba(113, 75, 139, 0.22), transparent 42%), #0f0f15; overflow: hidden; }
 .collection-artwork-fallback svg { width: 100%; height: 100%; }
 .collection-artwork-fallback > span { position: absolute; bottom: 8%; max-width: 76%; color: rgba(239, 208, 143, 0.72); font: 650 0.66rem/1.2 sans-serif; letter-spacing: 0.12em; text-align: center; text-transform: uppercase; }
 .collection-artwork-fallback.is-compact > img { width: 52%; height: 52%; object-fit: contain; opacity: 0.72; }

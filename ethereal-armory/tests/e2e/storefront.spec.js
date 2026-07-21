@@ -126,6 +126,55 @@ test("collection artwork follows the source priority and survives empty or broke
   await expect(page.getByRole("link", { name: /Shattered Archive/ }).locator(".collection-artwork-fallback")).toBeVisible();
 });
 
+test("Shop collection artwork stays in bounded landscape cards", async ({ page }) => {
+  await page.goto("/products");
+  const rail = page.locator(".collection-rail");
+  const cards = rail.locator(":scope > a");
+  await expect(cards).toHaveCount(5);
+  await expect(page.getByRole("link", { name: /Product-backed Relics/ }).locator(".collection-artwork-image")).toBeVisible();
+  await expect(page.getByRole("link", { name: /Awaiting Relics/ }).locator(".collection-artwork-fallback")).toBeVisible();
+
+  const metrics = await rail.evaluate((element) => ({
+    documentWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth,
+    cards: [...element.querySelectorAll(":scope > a")].map((card) => {
+      const frame = card.querySelector(".collection-artwork-frame");
+      const image = card.querySelector(".collection-artwork-image");
+      const fallback = card.querySelector(".collection-artwork-fallback");
+      const frameBox = frame.getBoundingClientRect();
+      return {
+        cardHeight: card.getBoundingClientRect().height,
+        frameWidth: frameBox.width,
+        frameHeight: frameBox.height,
+        hasFallback: Boolean(fallback),
+        imageHeight: image?.getBoundingClientRect().height || null,
+        objectFit: image ? getComputedStyle(image).objectFit : null,
+        objectPosition: image ? getComputedStyle(image).objectPosition : null,
+      };
+    }),
+    visibleCards: [...element.querySelectorAll(":scope > a")].filter((card) => {
+      const box = card.getBoundingClientRect();
+      return box.left >= 0 && box.right <= window.innerWidth;
+    }).length,
+  }));
+
+  expect(metrics.documentWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
+  for (const card of metrics.cards) {
+    expect(card.frameWidth / card.frameHeight).toBeCloseTo(4 / 3, 1);
+    expect(card.frameHeight).toBeLessThan(180);
+    expect(card.cardHeight).toBeLessThan(260);
+    if (card.imageHeight !== null) {
+      expect(card.imageHeight).toBeCloseTo(card.frameHeight, 0);
+      expect(card.objectFit).toBe("cover");
+      expect(card.objectPosition).toBe("50% 50%");
+    }
+  }
+
+  const fallbackHeights = metrics.cards.filter((card) => card.hasFallback).map((card) => card.frameHeight);
+  expect(Math.max(...fallbackHeights) - Math.min(...fallbackHeights)).toBeLessThan(1);
+  if (page.viewportSize().width >= 1024) expect(metrics.visibleCards).toBeGreaterThanOrEqual(4);
+});
+
 test("mobile navigation closes on route changes and contains keyboard focus", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "390px", "Keyboard behavior is viewport-independent.");
   await page.goto("/");

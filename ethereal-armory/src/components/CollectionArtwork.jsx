@@ -6,7 +6,7 @@ function BrandedCollectionFallback({ title, compact }) {
   const gradientId = useId().replaceAll(":", "");
 
   return (
-    <span className={`collection-artwork-fallback${compact ? " rail-image is-compact" : ""}`} aria-hidden="true">
+    <span className={`collection-artwork-fallback${compact ? " is-compact" : ""}`} aria-hidden="true">
       <svg viewBox="0 0 320 240" focusable="false">
         <defs>
           <radialGradient id={gradientId} cx="50%" cy="42%" r="58%">
@@ -33,22 +33,22 @@ export default function CollectionArtwork({ collection, compact = false, sizes =
   const [failedUrl, setFailedUrl] = useState("");
   const image = artwork.image;
 
-  if (!image || failedUrl === image.url) {
-    return <BrandedCollectionFallback title={collection?.title || "The armory"} compact={compact} />;
-  }
-
   return (
-    <img
-      className={compact ? "rail-image" : undefined}
-      src={shopifyImageUrl(image.url, compact ? 320 : 800)}
-      srcSet={shopifySrcSet(image.url, compact ? [180, 320, 480] : [480, 800, 1200])}
-      sizes={sizes}
-      alt={getCollectionArtworkAlt(collection, artwork)}
-      width={image.width || (compact ? 320 : 800)}
-      height={image.height || (compact ? 256 : 640)}
-      loading={eager ? "eager" : "lazy"}
-      decoding="async"
-      onError={() => setFailedUrl(image.url)}
-    />
+    <span className={`collection-artwork-frame${compact ? " is-compact" : ""}`}>
+      {!image || failedUrl === image.url
+        ? <BrandedCollectionFallback title={collection?.title || "The armory"} compact={compact} />
+        : <img
+            className="collection-artwork-image"
+            src={shopifyImageUrl(image.url, compact ? 320 : 800)}
+            srcSet={shopifySrcSet(image.url, compact ? [180, 320, 480] : [480, 800, 1200])}
+            sizes={sizes}
+            alt={getCollectionArtworkAlt(collection, artwork)}
+            width={image.width || (compact ? 320 : 800)}
+            height={image.height || (compact ? 240 : 640)}
+            loading={eager ? "eager" : "lazy"}
+            decoding="async"
+            onError={() => setFailedUrl(image.url)}
+          />}
+    </span>
   );
 }

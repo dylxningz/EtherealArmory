@@ -113,7 +113,7 @@ export default function ProductsPage() {
       <section className="collection-rail-wrap section-shell" aria-label="Shop by collection">
         <div className="collection-rail-heading"><h2>Collections</h2><div><button className="icon-button" onClick={() => carouselRef.current?.scrollBy({ left: -360, behavior: "smooth" })} aria-label="Previous collections" type="button">←</button><button className="icon-button" onClick={() => carouselRef.current?.scrollBy({ left: 360, behavior: "smooth" })} aria-label="Next collections" type="button">→</button></div></div>
         <div className="collection-rail" ref={carouselRef}>
-          <Link className={!handle ? "active" : ""} to="/products"><span className="rail-image collection-artwork-fallback is-compact" aria-hidden="true"><img src="/brand-mark.svg" alt="" width="96" height="96" /></span><strong>All products</strong></Link>
+          <Link className={!handle ? "active" : ""} to="/products"><span className="collection-artwork-frame is-compact"><span className="collection-artwork-fallback is-compact" aria-hidden="true"><img src="/brand-mark.svg" alt="" width="96" height="96" /></span></span><strong>All products</strong></Link>
           {collections.map((collection) => <Link className={handle === collection.handle ? "active" : ""} to={`/collections/${collection.handle}`} key={collection.id}><CollectionArtwork collection={collection} compact sizes="(max-width: 650px) 132px, 168px" /><strong>{collection.title}</strong></Link>)}
         </div>
       </section>
