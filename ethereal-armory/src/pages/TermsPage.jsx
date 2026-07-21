@@ -1,6 +1,9 @@
+import Seo from "../components/Seo";
+
 export default function TermsPage() {
   return (
-    <main className="policy-page">
+    <main id="main-content" className="policy-page">
+      <Seo title="Terms of Service" description="Terms governing use of the Ethereal Armory storefront, products, and custom work." path="/terms-of-service" />
       <section className="policy-hero">
         <p className="section-eyebrow">Legal</p>
         <h1>Terms of Service</h1>

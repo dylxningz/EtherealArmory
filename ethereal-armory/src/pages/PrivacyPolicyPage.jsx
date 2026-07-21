@@ -1,6 +1,9 @@
+import Seo from "../components/Seo";
+
 export default function PrivacyPolicyPage() {
   return (
-    <main className="policy-page">
+    <main id="main-content" className="policy-page">
+      <Seo title="Privacy Policy" description="How Ethereal Armory collects, uses, and protects storefront and inquiry information." path="/privacy-policy" />
       <section className="policy-hero">
         <p className="section-eyebrow">Legal</p>
         <h1>Privacy Policy</h1>

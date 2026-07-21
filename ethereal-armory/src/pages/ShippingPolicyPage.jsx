@@ -1,6 +1,9 @@
+import Seo from "../components/Seo";
+
 export default function ShippingPolicyPage() {
   return (
-    <main className="policy-page">
+    <main id="main-content" className="policy-page">
+      <Seo title="Shipping Policy" description="Processing, tracking, address, and damaged-package information for Ethereal Armory orders." path="/shipping-policy" />
       <section className="policy-hero">
         <p className="section-eyebrow">Store Policy</p>
         <h1>Shipping Policy</h1>

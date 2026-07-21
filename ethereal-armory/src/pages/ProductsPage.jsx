@@ -1,267 +1,155 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { getCollections, getProducts, getCollectionProducts } from "../lib/shopify";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
+import { ThemeLink as Link } from "../components/ThemeLinks";
+import Seo, { SITE_URL } from "../components/Seo";
+import ProductCard from "../components/ProductCard";
+import CollectionArtwork from "../components/CollectionArtwork";
+import { EmptyState, ErrorState, LoadingGrid } from "../components/AsyncState";
+import { getCollectionProductsPage, getCollectionsPage, getProductsPage } from "../lib/shopify";
+import { getCatalogState, sortProducts, updateCatalogState } from "../lib/commerce";
+import { selectCollectionArtworks } from "../lib/collectionArtwork";
 import "./ProductsPage.css";
-import { getSalePricing, formatPrice } from "../lib/pricing";
+
+const sortOptions = {
+  featured: { general: "BEST_SELLING", collection: "COLLECTION_DEFAULT", reverse: false },
+  "title-asc": { general: "TITLE", collection: "TITLE", reverse: false },
+  "title-desc": { general: "TITLE", collection: "TITLE", reverse: true },
+  "price-low-high": { general: "PRICE", collection: "PRICE", reverse: false },
+  "price-high-low": { general: "PRICE", collection: "PRICE", reverse: true },
+};
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState([]);
+  const { handle } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const catalogState = getCatalogState(searchParams);
   const [collections, setCollections] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [selectedCollection, setSelectedCollection] = useState("All");
-  const [sortOption, setSortOption] = useState("featured");
-
+  const [catalog, setCatalog] = useState({ products: [], pageInfo: {}, collection: null, routeHandle: undefined });
+  const [status, setStatus] = useState("loading");
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   const carouselRef = useRef(null);
 
   useEffect(() => {
-    let ignore = false;
-
-    async function loadInitialData() {
-      try {
-        setLoading(true);
-        setError("");
-
-        const [productsData, collectionsData] = await Promise.all([
-          getProducts(40),
-          getCollections(12),
-        ]);
-
-        if (!ignore) {
-          setProducts(productsData || []);
-          setCollections(collectionsData || []);
-        }
-      } catch (err) {
-        if (!ignore) {
-          setError(err.message || "Failed to load products.");
-        }
-      } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadInitialData();
-
-    return () => {
-      ignore = true;
-    };
+    const controller = new AbortController();
+    getCollectionsPage({ first: 20, signal: controller.signal }).then((result) => setCollections(result.nodes)).catch(() => {});
+    return () => controller.abort();
   }, []);
 
-  async function handleCollectionClick(handle) {
-    try {
-      setLoading(true);
-      setError("");
-      setSelectedCollection(handle);
+  useEffect(() => {
+    const controller = new AbortController();
+    const selectedSort = sortOptions[catalogState.sort] || sortOptions.featured;
+    const request = handle
+      ? getCollectionProductsPage(handle, { first: 24, sortKey: selectedSort.collection, reverse: selectedSort.reverse, signal: controller.signal })
+      : getProductsPage({ first: 24, sortKey: selectedSort.general, reverse: selectedSort.reverse, signal: controller.signal });
 
-      if (handle === "All") {
-        const allProducts = await getProducts(40);
-        setProducts(allProducts || []);
+    request.then((result) => {
+      if (handle) {
+        setCatalog({ products: result?.products?.nodes || [], pageInfo: result?.products?.pageInfo || {}, collection: result || null, routeHandle: handle });
       } else {
-        const collection = await getCollectionProducts(handle, 40);
-        setProducts(collection?.products?.nodes || []);
+        setCatalog({ products: result.nodes, pageInfo: result.pageInfo, collection: null, routeHandle: null });
       }
-    } catch (err) {
-      setError(err.message || "Failed to load collection.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const sortedProducts = useMemo(() => {
-    const result = [...products];
-
-    switch (sortOption) {
-      case "title-asc":
-        result.sort((a, b) => a.title.localeCompare(b.title));
-        break;
-      case "title-desc":
-        result.sort((a, b) => b.title.localeCompare(a.title));
-        break;
-      case "price-low-high":
-        result.sort(
-          (a, b) =>
-            Number(a.priceRange.minVariantPrice.amount) -
-            Number(b.priceRange.minVariantPrice.amount)
-        );
-        break;
-      case "price-high-low":
-        result.sort(
-          (a, b) =>
-            Number(b.priceRange.minVariantPrice.amount) -
-            Number(a.priceRange.minVariantPrice.amount)
-        );
-        break;
-      default:
-        break;
-    }
-
-    return result;
-  }, [products, sortOption]);
-
-  function scrollCarousel(direction) {
-    if (!carouselRef.current) return;
-
-    const scrollAmount = carouselRef.current.clientWidth * 0.8;
-
-    carouselRef.current.scrollBy({
-      left: direction === "left" ? -scrollAmount : scrollAmount,
-      behavior: "smooth",
+      setStatus("ready");
+    }).catch((error) => {
+      if (error.name !== "AbortError") setStatus("error");
     });
+    return () => controller.abort();
+  }, [catalogState.sort, handle, retryKey]);
+
+  const productTypes = useMemo(() => [...new Set(catalog.products.map((product) => product.productType).filter(Boolean))].sort(), [catalog.products]);
+  const collectionArtworks = useMemo(() => selectCollectionArtworks(collections), [collections]);
+  const filteredProducts = useMemo(() => {
+    const filtered = catalog.products.filter((product) => {
+      if (catalogState.type !== "all" && product.productType !== catalogState.type) return false;
+      if (catalogState.availability === "available" && !product.availableForSale) return false;
+      if (catalogState.availability === "sold-out" && product.availableForSale) return false;
+      return true;
+    });
+    return sortProducts(filtered, catalogState.sort);
+  }, [catalog.products, catalogState.availability, catalogState.sort, catalogState.type]);
+
+  const setFilter = useCallback((changes) => {
+    if (changes.sort) setStatus("loading");
+    setSearchParams(updateCatalogState(searchParams, changes), { replace: false });
+  }, [searchParams, setSearchParams]);
+  const clearFilters = useCallback(() => {
+    const next = new URLSearchParams();
+    if (searchParams.get("theme") === "cyberpunk") next.set("theme", "cyberpunk");
+    setSearchParams(next);
+  }, [searchParams, setSearchParams]);
+
+  async function loadMore() {
+    if (!catalog.pageInfo?.hasNextPage || loadingMore) return;
+    const selectedSort = sortOptions[catalogState.sort] || sortOptions.featured;
+    setLoadingMore(true);
+    try {
+      const result = handle
+        ? await getCollectionProductsPage(handle, { first: 24, after: catalog.pageInfo.endCursor, sortKey: selectedSort.collection, reverse: selectedSort.reverse })
+        : await getProductsPage({ first: 24, after: catalog.pageInfo.endCursor, sortKey: selectedSort.general, reverse: selectedSort.reverse });
+      const connection = handle ? result.products : result;
+      setCatalog((current) => ({ ...current, products: [...current.products, ...connection.nodes], pageInfo: connection.pageInfo }));
+    } catch {
+      setStatus("load-more-error");
+    } finally {
+      setLoadingMore(false);
+    }
   }
 
-  if (loading) {
-    return <main className="products-page-status">Loading products...</main>;
-  }
+  const title = catalog.collection?.title || "Shop All";
+  const description = catalog.collection?.seo?.description || catalog.collection?.description || "Browse available fantasy props, replicas, collectibles, and display-ready pieces from Ethereal Armory.";
+  const path = handle ? `/collections/${handle}` : "/products";
+  const schema = useMemo(() => ({
+    "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+      { "@type": "ListItem", position: 2, name: handle ? title : "Shop", item: `${SITE_URL}${path}` },
+    ],
+  }), [handle, path, title]);
 
-  if (error) {
-    return <main className="products-page-status">{error}</main>;
+  if (status === "ready" && handle && !catalog.collection) {
+    return <main id="main-content" className="catalog-page section-shell"><Seo title="Collection Not Found" path={path} noIndex /><EmptyState title="This collection cannot be found" message="It may have been renamed or removed." action={<Link className="button button-primary" to="/products">Shop all products</Link>} /></main>;
   }
 
   return (
-    <main className="products-page">
-      <section className="products-hero">
-        <div className="products-hero-header">
-          <div>
-            <p className="products-eyebrow">Shop The Armory</p>
-            <h1>Products</h1>
-            <p className="products-subtext">
-              Browse by collection, then sort products the way you want.
-            </p>
+    <main id="main-content" className="catalog-page">
+      <Seo title={catalog.collection?.seo?.title || title} path={path} description={description} structuredData={schema} />
+      <section className="catalog-hero section-shell">
+        <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/">Home</Link><span aria-hidden="true">/</span><span>{title}</span></nav>
+        <p className="overline">{handle ? "Curated collection" : "Shop the armory"}</p>
+        <h1>{title}</h1>
+        <p>{description}</p>
+      </section>
+
+      <section className="collection-rail-wrap section-shell" aria-label="Shop by collection">
+        <div className="collection-rail-heading"><h2>Collections</h2><div><button className="icon-button" onClick={() => carouselRef.current?.scrollBy({ left: -360, behavior: "smooth" })} aria-label="Previous collections" type="button">←</button><button className="icon-button" onClick={() => carouselRef.current?.scrollBy({ left: 360, behavior: "smooth" })} aria-label="Next collections" type="button">→</button></div></div>
+        <div className="collection-rail" ref={carouselRef}>
+          <Link className={!handle ? "active" : ""} to="/products"><span className="collection-artwork-frame is-compact"><span className="collection-artwork-fallback is-compact" aria-hidden="true"><img src="/brand-mark.svg" alt="" width="96" height="96" /></span></span><strong>All products</strong></Link>
+          {collections.map((collection) => <Link className={handle === collection.handle ? "active" : ""} to={`/collections/${collection.handle}`} key={collection.id}><CollectionArtwork collection={collection} artwork={collectionArtworks.get(collection.id)} compact sizes="(max-width: 650px) 132px, 168px" /><strong>{collection.title}</strong></Link>)}
+        </div>
+      </section>
+
+      <section className="catalog-results section-shell">
+        <details className="catalog-filters" open>
+          <summary><span>Filter & sort</span><span>{filteredProducts.length}{catalog.pageInfo?.hasNextPage ? "+" : ""} results</span></summary>
+          <div className="filter-fields">
+            <label>Product type<select value={catalogState.type} onChange={(event) => setFilter({ type: event.target.value })}><option value="all">All types</option>{productTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
+            <label>Availability<select value={catalogState.availability} onChange={(event) => setFilter({ availability: event.target.value })}><option value="all">Any availability</option><option value="available">Available</option><option value="sold-out">Sold out</option></select></label>
+            <label>Sort by<select value={catalogState.sort} onChange={(event) => setFilter({ sort: event.target.value })}><option value="featured">Featured</option><option value="title-asc">Title: A–Z</option><option value="title-desc">Title: Z–A</option><option value="price-low-high">Price: low to high</option><option value="price-high-low">Price: high to low</option></select></label>
+            {(catalogState.type !== "all" || catalogState.availability !== "all" || catalogState.sort !== "featured") && <button className="text-button clear-filters" onClick={clearFilters} type="button">Clear filters</button>}
           </div>
+        </details>
 
-          <div className="carousel-controls">
-            <button
-              className="carousel-arrow"
-              onClick={() => scrollCarousel("left")}
-              aria-label="Scroll left"
-            >
-              ←
-            </button>
-            <button
-              className="carousel-arrow"
-              onClick={() => scrollCarousel("right")}
-              aria-label="Scroll right"
-            >
-              →
-            </button>
-          </div>
-        </div>
+        {status === "error"
+          ? <ErrorState title="The catalog could not be loaded" message="Shopify did not respond. No cart or account data has been changed." onRetry={() => { setStatus("loading"); setRetryKey((key) => key + 1); }} />
+          : status === "loading" || catalog.routeHandle !== (handle || null)
+            ? <LoadingGrid />
+            : filteredProducts.length
+              ? <div className="product-grid">{filteredProducts.map((product, index) => <ProductCard product={product} eager={index < 4} key={product.id} />)}</div>
+              : <EmptyState title="No products match these filters" message="Clear one or more filters, or explore another collection." action={<button className="button button-secondary" onClick={clearFilters} type="button">Clear filters</button>} />}
 
-        <div className="featured-carousel" ref={carouselRef}>
-          <button
-            className={`featured-card collection-card-button ${
-              selectedCollection === "All" ? "selected-collection" : ""
-            }`}
-            onClick={() => handleCollectionClick("All")}
-          >
-            <div className="featured-card-image-wrap">
-              <div className="featured-card-placeholder">All Products</div>
-            </div>
-            <div className="featured-card-body">
-              <p className="featured-card-type">Collection</p>
-              <h3>All Products</h3>
-            </div>
-          </button>
-
-          {collections.map((collection) => (
-            <button
-              key={collection.id}
-              className={`featured-card collection-card-button ${
-                selectedCollection === collection.handle ? "selected-collection" : ""
-              }`}
-              onClick={() => handleCollectionClick(collection.handle)}
-            >
-              <div className="featured-card-image-wrap">
-                {collection.image?.url ? (
-                  <img
-                    src={collection.image.url}
-                    alt={collection.image.altText || collection.title}
-                    className="featured-card-image"
-                  />
-                ) : (
-                  <div className="featured-card-placeholder">{collection.title}</div>
-                )}
-              </div>
-
-              <div className="featured-card-body">
-                <p className="featured-card-type">Collection</p>
-                <h3>{collection.title}</h3>
-              </div>
-            </button>
-          ))}
-        </div>
+        {catalog.pageInfo?.hasNextPage && status !== "loading" && <div className="load-more"><p>Showing {catalog.products.length}+ products</p><button className="button button-secondary" onClick={loadMore} disabled={loadingMore} type="button">{loadingMore ? "Loading more…" : "Load more products"}</button></div>}
+        {status === "load-more-error" && <div className="inline-error" role="alert"><p>More products could not be loaded. The products above are still available.</p><button className="text-button" onClick={loadMore} type="button">Try again</button></div>}
       </section>
 
-      <section className="products-controls">
-        <div className="filter-group">
-          <label htmlFor="sort">Sort</label>
-          <select
-            id="sort"
-            value={sortOption}
-            onChange={(e) => setSortOption(e.target.value)}
-          >
-            <option value="featured">Featured</option>
-            <option value="title-asc">Title: A to Z</option>
-            <option value="title-desc">Title: Z to A</option>
-            <option value="price-low-high">Price: Low to High</option>
-            <option value="price-high-low">Price: High to Low</option>
-          </select>
-        </div>
-      </section>
-
-      <section className="products-grid-section">
-        <div className="products-grid">
-          {sortedProducts.map((product) => (
-            <Link
-              to={`/products/${product.handle}`}
-              className="product-card"
-              key={product.id}
-            >
-              <div className="product-card-image-wrap">
-                {product.featuredImage?.url ? (
-                  <img
-                    src={product.featuredImage.url}
-                    alt={product.featuredImage.altText || product.title}
-                    className="product-card-image"
-                  />
-                ) : (
-                  <div className="product-card-placeholder">No image</div>
-                )}
-              </div>
-
-              <div className="product-card-body">
-                <p className="product-card-type">
-                  {product.productType || "Product"}
-                </p>
-                <h3>{product.title}</h3>
-                <div className="product-card-footer">
-{(() => {
-  const salePricing = getSalePricing(product.priceRange.minVariantPrice.amount);
-
-  return salePricing.isOnSale ? (
-    <div className="product-card-price-block">
-      <span className="product-card-sale-price">
-        ${formatPrice(salePricing.finalPrice)}
-      </span>
-      <span className="product-card-original-price">
-        ${formatPrice(salePricing.originalPrice)}
-      </span>
-    </div>
-  ) : (
-    <span className="product-card-price">
-      ${formatPrice(product.priceRange.minVariantPrice.amount)}
-    </span>
-  );
-})()}
-                  <span className="product-card-link">View →</span>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
+      <section className="catalog-cta section-shell"><div><p className="overline">One of one</p><h2>Need a piece that is not in the shop?</h2><p>Start a custom brief for a replica, original prop, or display-focused build.</p></div><Link className="button button-primary" to="/contact">Request a custom build</Link></section>
     </main>
   );
 }

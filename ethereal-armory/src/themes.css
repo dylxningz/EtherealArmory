@@ -1,0 +1,61 @@
+:root[data-storefront-theme="cyberpunk"] {
+  --font-display: Bahnschrift, "Arial Narrow", "Segoe UI", sans-serif;
+  --ink: #edfaff;
+  --muted: #aec7cf;
+  --quiet: #78939c;
+  --night: #05070b;
+  --night-2: #080d13;
+  --surface: #0c141c;
+  --surface-2: #101b25;
+  --line: rgba(76, 220, 255, .2);
+  --line-strong: rgba(76, 220, 255, .38);
+  --gold: #2fd5f5;
+  --gold-bright: #8beaff;
+  --gold-dark: #087f9c;
+  --fallback-glow: #ff4fca;
+  --fallback-glow-deep: #74366e;
+  --fallback-metal: #2fd5f5;
+  --fallback-metal-bright: #a4f2ff;
+  --fallback-surface: #08131b;
+  --radius-sm: 0;
+  --radius-md: 3px;
+  --radius-lg: 6px;
+  --shadow-sm: 0 16px 38px rgba(0, 3, 8, .44), 0 0 18px rgba(47, 213, 245, .06);
+  --shadow-lg: 0 32px 100px rgba(0, 3, 8, .7), 0 0 32px rgba(47, 213, 245, .08);
+}
+
+[data-storefront-theme="cyberpunk"] body {
+  background-color: var(--night);
+  background-image: linear-gradient(rgba(47, 213, 245, .025) 1px, transparent 1px), linear-gradient(90deg, rgba(47, 213, 245, .025) 1px, transparent 1px), radial-gradient(circle at 82% 6%, rgba(255, 79, 202, .1), transparent 29rem), radial-gradient(circle at 5% 35%, rgba(47, 213, 245, .1), transparent 34rem);
+  background-size: 42px 42px, 42px 42px, auto, auto;
+}
+
+[data-storefront-theme="cyberpunk"] body::before { opacity: .022; }
+[data-storefront-theme="cyberpunk"] h1,
+[data-storefront-theme="cyberpunk"] h2,
+[data-storefront-theme="cyberpunk"] h3 { letter-spacing: -.015em; }
+[data-storefront-theme="cyberpunk"] .announcement-banner { border-color: rgba(255, 79, 202, .24); background: #0b0d15; }
+[data-storefront-theme="cyberpunk"] .site-header { background: rgba(5, 9, 14, .92); }
+[data-storefront-theme="cyberpunk"] .mobile-nav-panel { background: #071019; }
+[data-storefront-theme="cyberpunk"] .site-footer { background: #030609; }
+[data-storefront-theme="cyberpunk"] .button-primary,
+[data-storefront-theme="cyberpunk"] .primary-link-btn { color: #021017; border-color: #8beaff; background: linear-gradient(115deg, #8beaff, #2fd5f5 65%, #f65ccc); box-shadow: 0 10px 30px rgba(47, 213, 245, .16); }
+[data-storefront-theme="cyberpunk"] .button-primary:hover:not(:disabled),
+[data-storefront-theme="cyberpunk"] .primary-link-btn:hover { background: #b9f5ff; }
+[data-storefront-theme="cyberpunk"] .button-secondary,
+[data-storefront-theme="cyberpunk"] .secondary-link-btn { background: rgba(47, 213, 245, .035); }
+[data-storefront-theme="cyberpunk"] .product-card,
+[data-storefront-theme="cyberpunk"] .collection-card,
+[data-storefront-theme="cyberpunk"] .status-panel { background: rgba(7, 15, 22, .82); }
+[data-storefront-theme="cyberpunk"] .overline,
+[data-storefront-theme="cyberpunk"] .section-eyebrow { text-shadow: 0 0 14px rgba(47, 213, 245, .24); }
+[data-storefront-theme="cyberpunk"] .hero-art::after { background: rgba(255, 79, 202, .17); }
+[data-storefront-theme="cyberpunk"] .artifact-stage { --artifact-metal: #2fd5f5; --artifact-metal-bright: #a4f2ff; --artifact-glass: rgba(42, 180, 210, .72); --artifact-glass-dark: rgba(5, 17, 26, .96); --artifact-energy: rgba(255, 79, 202, .78); border-color: rgba(47, 213, 245, .24); background: radial-gradient(circle at 50% 43%, rgba(255, 79, 202, .16), transparent 32%), linear-gradient(160deg, #08131b, #03070c 72%); }
+[data-storefront-theme="cyberpunk"] .artifact-frame-cap,
+[data-storefront-theme="cyberpunk"] .artifact-frame-rail { background: linear-gradient(90deg, #062631, #a4f2ff, #087f9c); }
+[data-storefront-theme="cyberpunk"] .artifact-fragment { background: linear-gradient(135deg, #a4f2ff, #f65ccc 58%, #061019); }
+[data-storefront-theme="cyberpunk"] .construction-panel { background: radial-gradient(circle at 18% 42%, rgba(255, 79, 202, .15), transparent 31rem), linear-gradient(145deg, rgba(8, 18, 26, .98), rgba(3, 7, 12, .99)); }
+[data-storefront-theme="cyberpunk"] .construction-panel::after { position: absolute; inset: 0; content: ""; pointer-events: none; background: linear-gradient(90deg, transparent 49.8%, rgba(47, 213, 245, .04) 50%, transparent 50.2%); background-size: 31px 100%; }
+[data-storefront-theme="cyberpunk"] .collection-rail > a:hover,
+[data-storefront-theme="cyberpunk"] .collection-rail > a.active { background: rgba(47, 213, 245, .08); }
+[data-storefront-theme="cyberpunk"] :focus-visible { outline-color: #8beaff; }

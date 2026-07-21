@@ -1,6 +1,9 @@
+import Seo from "../components/Seo";
+
 export default function ReturnsPolicyPage() {
   return (
-    <main className="policy-page">
+    <main id="main-content" className="policy-page">
+      <Seo title="Returns Policy" description="Return eligibility and order-support information for Ethereal Armory purchases and custom work." path="/returns-policy" />
       <section className="policy-hero">
         <p className="section-eyebrow">Store Policy</p>
         <h1>Returns & Refund Policy</h1>

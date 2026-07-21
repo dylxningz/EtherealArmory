@@ -1,31 +1,35 @@
-import { siteSettings } from "../config/siteSettings";
+const DEFAULT_LOCALE = "en-US";
 
-export function getSalePricing(basePrice) {
-  const numericPrice = Number(basePrice || 0);
-  const sale = siteSettings.sitewideSale;
+export function formatMoney(amount, currencyCode = "USD", locale = DEFAULT_LOCALE) {
+  const numericAmount = Number(amount);
 
-  if (!sale.enabled) {
-    return {
-      originalPrice: numericPrice,
-      finalPrice: numericPrice,
-      isOnSale: false,
-      percentOff: 0,
-      label: "",
-    };
-  }
+  if (!Number.isFinite(numericAmount)) return "";
 
-  const discountAmount = numericPrice * (sale.percentOff / 100);
-  const finalPrice = numericPrice - discountAmount;
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: currencyCode || "USD",
+    currencyDisplay: "narrowSymbol",
+  }).format(numericAmount);
+}
+
+export function getSalePricing(price, compareAtPrice) {
+  const finalPrice = Number(price?.amount ?? price ?? 0);
+  const originalPrice = Number(compareAtPrice?.amount ?? compareAtPrice ?? 0);
+  const currencyCode = price?.currencyCode || compareAtPrice?.currencyCode || "USD";
+  const isOnSale = originalPrice > finalPrice && finalPrice >= 0;
 
   return {
-    originalPrice: numericPrice,
     finalPrice,
-    isOnSale: true,
-    percentOff: sale.percentOff,
-    label: sale.label,
+    originalPrice: isOnSale ? originalPrice : finalPrice,
+    currencyCode,
+    isOnSale,
+    percentOff: isOnSale
+      ? Math.round(((originalPrice - finalPrice) / originalPrice) * 100)
+      : 0,
   };
 }
 
-export function formatPrice(amount) {
-  return Number(amount || 0).toFixed(2);
+// Kept for compatibility with any older portfolio content that imports it.
+export function formatPrice(amount, currencyCode = "USD") {
+  return formatMoney(amount, currencyCode);
 }
