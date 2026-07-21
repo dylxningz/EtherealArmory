@@ -207,6 +207,55 @@ test("the animated artifact respects reduced motion and does not require WebGL",
   await expect(page.locator(".hero-image-frame")).toHaveCount(0);
 });
 
+test("the dimensional artifact lazy-loads while preserving an immediate fallback", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "Lazy-load behavior is viewport-independent.");
+  await page.route("**/src/components/ArcaneArtifact.jsx*", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    await route.continue();
+  });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await expect(page.locator(".artifact-static")).toBeVisible();
+  await expect(page.locator(".artifact-advanced")).toBeVisible();
+  await expect(page.locator(".artifact-crystal-face")).toHaveCount(4);
+  await expect(page.locator(".artifact-ring")).toHaveCount(5);
+});
+
+test("artifact import failure keeps the hero and its CTA usable", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "Failure behavior is viewport-independent.");
+  await page.route("**/src/components/ArcaneArtifact.jsx*", (route) => route.abort("failed"));
+  await page.goto("/");
+  await expect(page.locator(".artifact-static")).toBeVisible();
+  await page.getByRole("link", { name: "Shop available pieces" }).click();
+  await expect(page).toHaveURL(/\/products$/);
+});
+
+test("artifact pauses while hidden and removes its visibility listener on unmount", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "Lifecycle behavior is viewport-independent.");
+  await page.addInitScript(() => {
+    window.__artifactListeners = { adds: 0, removes: 0 };
+    const add = Document.prototype.addEventListener;
+    const remove = Document.prototype.removeEventListener;
+    Document.prototype.addEventListener = function patchedAdd(type, ...args) {
+      if (type === "visibilitychange") window.__artifactListeners.adds += 1;
+      return add.call(this, type, ...args);
+    };
+    Document.prototype.removeEventListener = function patchedRemove(type, ...args) {
+      if (type === "visibilitychange") window.__artifactListeners.removes += 1;
+      return remove.call(this, type, ...args);
+    };
+  });
+  await page.goto("/");
+  const artifact = page.locator(".artifact-advanced");
+  await expect(artifact).toBeVisible();
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect(artifact).toHaveAttribute("data-paused", "true");
+  await page.getByRole("link", { name: "Shop available pieces" }).click();
+  await expect.poll(() => page.evaluate(() => window.__artifactListeners)).toEqual(expect.objectContaining({ adds: 2, removes: 2 }));
+});
+
 test("Judge.me failure leaves the product usable and reports unavailability honestly", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "390px", "Third-party failure behavior is viewport-independent.");
   await page.route("https://cdnwidget.judge.me/**", (route) => route.abort("failed"));
@@ -347,25 +396,79 @@ test("contact form reports a successful Formspree response and resets fields", a
   await expect(page.getByLabel("Name")).toHaveValue("");
 });
 
-test("portfolio dialog makes its page background inert", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "390px", "Dialog behavior is viewport-independent.");
+test("portfolio replaces the old project gallery with an accessible construction experience", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "Content behavior is viewport-independent.");
   await page.goto("/portfolio");
-  await page.getByRole("button", { name: /Celestial Mage Staff/ }).click();
-  await expect(page.getByRole("dialog", { name: "Celestial Mage Staff" })).toBeVisible();
-  await expect(page.locator(".portfolio-hero")).toHaveJSProperty("inert", true);
-  await expect(page.locator(".portfolio-grid-section")).toHaveJSProperty("inert", true);
-});
-
-test("portfolio calls to action retain accessible touch targets", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "390px", "Touch-target styling is viewport-independent.");
-  await page.goto("/portfolio");
-  const primary = page.getByRole("link", { name: "Start a Custom Build" });
+  await expect(page.getByRole("heading", { name: "Portfolio Under Construction" })).toBeVisible();
+  await expect(page.getByText(/Celestial Mage Staff/)).toHaveCount(0);
+  const primary = page.getByRole("link", { name: "Shop available pieces" });
   await expect(primary).toBeVisible();
   const box = await primary.boundingBox();
   expect(box.height).toBeGreaterThanOrEqual(44);
   if (process.env.REVIEW_SCREENSHOT_DIR) {
     const viewport = page.viewportSize();
     await page.screenshot({ path: join(process.env.REVIEW_SCREENSHOT_DIR, `predeployment-portfolio-${viewport.width}x${viewport.height}.png`), fullPage: true });
+  }
+});
+
+test("reviews construction page handles configured and unconfigured Etsy destinations safely", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "External-link behavior is viewport-independent.");
+  await page.goto("/reviews");
+  await expect(page.getByRole("heading", { name: "Reviews Page Under Construction" })).toBeVisible();
+  await expect(page.getByText(/customer reviews are available on our Etsy shop/i)).toBeVisible();
+  const etsy = page.getByRole("link", { name: /View Reviews on Etsy/ });
+  if (await etsy.count()) {
+    await expect(etsy).toHaveAttribute("href", /^https:\/\/([a-z0-9-]+\.)?etsy\.com\//i);
+    await expect(etsy).toHaveAttribute("target", "_blank");
+    await expect(etsy).toHaveAttribute("rel", "noopener noreferrer");
+  } else {
+    await expect(page.getByText("Etsy reviews link coming soon")).toBeVisible();
+    await expect(page.getByText("The official Etsy shop link has not been configured yet.")).toBeVisible();
+  }
+  await expect(page.locator(".jdgm-widget")).toHaveCount(0);
+});
+
+test("fantasy remains default and cyberpunk persists through internal navigation", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "Theme URL behavior is viewport-independent.");
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveAttribute("data-storefront-theme", "fantasy");
+  await page.goto("/?theme=cyberpunk");
+  await expect(page.locator("html")).toHaveAttribute("data-storefront-theme", "cyberpunk");
+  await page.getByRole("link", { name: "Shop available pieces" }).click();
+  await expect(page).toHaveURL(/\/products\?theme=cyberpunk$/);
+  await expect(page.locator("html")).toHaveAttribute("data-storefront-theme", "cyberpunk");
+});
+
+test("commerce routes render in both storefront themes", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "Cross-theme route coverage runs once.");
+  for (const theme of ["fantasy", "cyberpunk"]) {
+    const suffix = theme === "cyberpunk" ? "?theme=cyberpunk" : "";
+    for (const path of ["/", "/products", "/collections/featured", "/products/celestial-staff"]) {
+      await page.goto(`${path}${suffix}`);
+      await expect(page.locator("main h1")).toBeVisible();
+      await expect(page.locator("html")).toHaveAttribute("data-storefront-theme", theme);
+    }
+  }
+});
+
+test("cart and mobile menu behavior remain intact in both themes", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "Interactive theme coverage runs once.");
+  for (const suffix of ["", "?theme=cyberpunk"]) {
+    await page.goto(`/${suffix}`);
+    await page.getByRole("button", { name: "Menu" }).click();
+    await expect(page.getByRole("dialog", { name: "Mobile navigation" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Open cart with 0 items" }).click();
+    await expect(page.getByRole("dialog", { name: "Your cart (0)" })).toBeVisible();
+    await page.keyboard.press("Escape");
+  }
+});
+
+test("both themes have no serious or critical homepage Axe violations", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "Theme Axe checks run once.");
+  for (const suffix of ["", "?theme=cyberpunk"]) {
+    await page.goto(`/${suffix}`);
+    await expectNoMaterialAxeViolations(page);
   }
 });
 
@@ -403,6 +506,8 @@ const axeStates = [
   ["collection", "/collections/featured"],
   ["product", "/products/celestial-staff"],
   ["contact", "/contact"],
+  ["portfolio", "/portfolio"],
+  ["reviews", "/reviews"],
   ["404", "/not-a-real-route"],
 ];
 
@@ -436,6 +541,7 @@ const responsiveRoutes = [
   "/contact",
   "/shipping-policy",
   "/portfolio",
+  "/reviews",
   "/not-a-real-route",
 ];
 
@@ -448,6 +554,13 @@ test("key routes and the cart drawer stay within every required viewport", async
       scrollWidth: document.documentElement.scrollWidth,
     }));
     expect(sizes.scrollWidth, `Horizontal overflow at ${path}`).toBeLessThanOrEqual(sizes.clientWidth + 1);
+  }
+
+  for (const path of ["/", "/products", "/portfolio", "/reviews"]) {
+    await page.goto(`${path}?theme=cyberpunk`);
+    await expect(page.locator("main h1")).toBeVisible();
+    const sizes = await page.evaluate(() => ({ clientWidth: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth }));
+    expect(sizes.scrollWidth, `Cyberpunk horizontal overflow at ${path}`).toBeLessThanOrEqual(sizes.clientWidth + 1);
   }
 
   await page.goto("/");

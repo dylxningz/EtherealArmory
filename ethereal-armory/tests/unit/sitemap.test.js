@@ -39,6 +39,7 @@ test("sitemap paginates beyond ten Shopify pages without silently omitting URLs"
     await handler({ method: "GET" }, response);
     assert.equal(response.statusCode, 200);
     assert.equal(response.headers["Content-Type"], "application/xml; charset=utf-8");
+    assert.match(response.body, /<loc>https:\/\/www\.etherealarmory\.com\/reviews<\/loc>/);
     assert.equal((response.body.match(/\/products\/product-\d+/g) || []).length, 11);
   } finally {
     globalThis.fetch = originalFetch;

@@ -31,6 +31,7 @@ export default defineConfig({
       VITE_SHOPIFY_API_VERSION: "2025-10",
       VITE_JUDGEME_SHOP_DOMAIN: "playwright-store.myshopify.com",
       VITE_JUDGEME_PUBLIC_TOKEN: "playwright-public-token",
+      VITE_ETSY_SHOP_URL: "https://www.etsy.com/shop/ethereal-armory-preview#reviews",
     },
   },
 });
