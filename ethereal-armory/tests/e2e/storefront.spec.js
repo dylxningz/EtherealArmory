@@ -200,8 +200,8 @@ test("collection artwork follows the source priority and survives empty or broke
   await expect(collectionImage).toHaveAttribute("src", /og-image\.png/);
   await expect(collectionImage).toHaveAttribute("alt", "Celestial staff");
   const productImage = page.getByRole("link", { name: /Product-backed Relics/ }).locator("img");
-  await expect(productImage).toHaveAttribute("src", /og-image\.png/);
-  await expect(productImage).toHaveAttribute("alt", "Celestial staff");
+  await expect(productImage).toHaveAttribute("src", /test-product-portrait\.svg/);
+  await expect(productImage).toHaveAttribute("alt", portraitImage.altText);
   await expect(page.getByRole("link", { name: /Awaiting Relics/ }).locator(".collection-artwork-fallback")).toBeVisible();
 
   await page.goto("/products");
@@ -597,7 +597,7 @@ test("catalog rendering stays within the good CLS threshold with deterministic S
     }).observe({ type: "layout-shift", buffered: true });
   });
   await page.goto("/products");
-  await expect(page.locator(".product-card:not(.skeleton-card)")).toBeVisible();
+  await expect(page.locator(".product-card:not(.skeleton-card)").first()).toBeVisible();
   await page.waitForTimeout(250);
   expect(await page.evaluate(() => window.__cls)).toBeLessThanOrEqual(0.1);
 });
