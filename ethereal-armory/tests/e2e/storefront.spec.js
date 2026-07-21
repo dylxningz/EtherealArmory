@@ -16,7 +16,10 @@ const product = {
     { id: "variant-2", title: "Ancient", availableForSale: false, sku: "EA-2", selectedOptions: [{ name: "Finish", value: "Ancient" }], price: { amount: "120.00", currencyCode: "USD" }, compareAtPrice: null, image },
   ] },
 };
-const collection = { id: "gid://shopify/Collection/1", handle: "featured", title: "Featured Relics", description: "Collector favorites.", seo: { title: "Featured Relics", description: "Collector favorites." }, image };
+const collection = { id: "gid://shopify/Collection/1", handle: "featured", title: "Featured Relics", description: "Collector favorites.", seo: { title: "Featured Relics", description: "Collector favorites." }, image, products: { nodes: [product] } };
+const productBackedCollection = { id: "gid://shopify/Collection/2", handle: "product-backed", title: "Product-backed Relics", description: "Product artwork fallback.", image: null, products: { nodes: [product] } };
+const emptyCollection = { id: "gid://shopify/Collection/3", handle: "empty", title: "Awaiting Relics", description: "An empty collection.", image: null, products: { nodes: [] } };
+const brokenCollection = { id: "gid://shopify/Collection/4", handle: "broken", title: "Shattered Archive", description: "Broken media fallback.", image: { ...image, url: "http://127.0.0.1:5173/missing-collection-art.jpg" }, products: { nodes: [] } };
 
 async function mockShopify(page) {
   let cartQuantity = 0;
@@ -40,7 +43,7 @@ async function mockShopify(page) {
     const query = body.query;
     if (query.includes("ProductByHandle")) return route.fulfill({ json: { data: { product } } });
     if (query.includes("CollectionProducts")) return route.fulfill({ json: { data: { collection: { ...collection, products: { nodes: [product], pageInfo: { hasNextPage: false, endCursor: null } } } } } });
-    if (query.includes("CollectionsList")) return route.fulfill({ json: { data: { collections: { nodes: [collection], pageInfo: { hasNextPage: false, endCursor: null } } } } });
+    if (query.includes("CollectionsList")) return route.fulfill({ json: { data: { collections: { nodes: [collection, productBackedCollection, emptyCollection, brokenCollection], pageInfo: { hasNextPage: false, endCursor: null } } } } });
     if (query.includes("ProductsList")) return route.fulfill({ json: { data: { products: { nodes: [product], pageInfo: { hasNextPage: false, endCursor: null } } } } });
     if (query.includes("CartCreate")) return route.fulfill({ json: { data: { cartCreate: { cart: cart(), userErrors: [] } } } });
     if (query.includes("AddToCart")) {
@@ -90,10 +93,98 @@ test("homepage has no horizontal overflow and exposes primary content", async ({
   if (page.viewportSize().width <= 768) {
     const menu = page.getByRole("button", { name: "Menu" });
     await menu.click();
-    await expect(page.getByRole("dialog", { name: "Mobile navigation" })).toBeVisible();
+    const dialog = page.getByRole("dialog", { name: "Mobile navigation" });
+    await expect(dialog).toBeVisible();
+    await expect(page.getByRole("button", { name: "Close navigation" })).toBeFocused();
+    await expect(page.locator("body")).toHaveCSS("overflow", "hidden");
+    await expect(page.locator("main")).toHaveJSProperty("inert", true);
+    await expect(page.locator(".site-header")).toHaveJSProperty("inert", true);
+    const overlay = page.locator(".mobile-nav-overlay");
+    const bounds = await overlay.boundingBox();
+    expect(bounds.x).toBeLessThanOrEqual(0);
+    expect(bounds.y).toBeLessThanOrEqual(0);
+    expect(bounds.width).toBeGreaterThanOrEqual(page.viewportSize().width);
+    expect(Number(await overlay.evaluate((element) => getComputedStyle(element).zIndex))).toBeGreaterThan(100);
     await page.keyboard.press("Escape");
-    await expect(page.getByRole("dialog", { name: "Mobile navigation" })).toBeHidden();
+    await expect(dialog).toBeHidden();
+    await expect(menu).toBeFocused();
   }
+});
+
+test("collection artwork follows the source priority and survives empty or broken media", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "Artwork source behavior is viewport-independent.");
+  await page.goto("/");
+  const collectionImage = page.getByRole("link", { name: /Featured Relics/ }).locator("img");
+  await expect(collectionImage).toHaveAttribute("src", /og-image\.png/);
+  await expect(collectionImage).toHaveAttribute("alt", "Celestial staff");
+  const productImage = page.getByRole("link", { name: /Product-backed Relics/ }).locator("img");
+  await expect(productImage).toHaveAttribute("src", /og-image\.png/);
+  await expect(productImage).toHaveAttribute("alt", "Celestial staff");
+  await expect(page.getByRole("link", { name: /Awaiting Relics/ }).locator(".collection-artwork-fallback")).toBeVisible();
+
+  await page.goto("/products");
+  await expect(page.getByRole("link", { name: /Shattered Archive/ }).locator(".collection-artwork-fallback")).toBeVisible();
+});
+
+test("mobile navigation closes on route changes and contains keyboard focus", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "Keyboard behavior is viewport-independent.");
+  await page.goto("/");
+  const menu = page.getByRole("button", { name: "Menu" });
+  await menu.click();
+  const dialog = page.getByRole("dialog", { name: "Mobile navigation" });
+  await page.keyboard.press("Shift+Tab");
+  await expect(dialog.getByRole("link", { name: /Custom builds/ })).toBeFocused();
+  await dialog.getByRole("link", { name: /Shop/ }).click();
+  await expect(page).toHaveURL(/\/products$/);
+  await expect(dialog).toBeHidden();
+  await expect(page.locator("body")).not.toHaveCSS("overflow", "hidden");
+});
+
+test("the animated artifact respects reduced motion and does not require WebGL", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "Motion behavior is viewport-independent.");
+  await page.addInitScript(() => {
+    if (window.HTMLCanvasElement) window.HTMLCanvasElement.prototype.getContext = () => null;
+  });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const artifact = page.getByRole("img", { name: /voidglass reliquary/i });
+  await expect(artifact).toBeVisible();
+  const motion = await page.locator(".artifact-assembly").evaluate((element) => ({
+    duration: Number.parseFloat(getComputedStyle(element).animationDuration),
+    iterations: getComputedStyle(element).animationIterationCount,
+  }));
+  expect(motion.duration).toBeLessThan(0.1);
+  expect(motion.iterations).toBe("1");
+  await expect(page.locator(".hero-image-frame")).toHaveCount(0);
+});
+
+test("Judge.me failure leaves the product usable and reports unavailability honestly", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "Third-party failure behavior is viewport-independent.");
+  await page.route("https://cdnwidget.judge.me/**", (route) => route.abort("failed"));
+  await page.goto("/products/celestial-staff");
+  const reviews = page.getByRole("region", { name: "Celestial Staff reviews" });
+  await reviews.scrollIntoViewIfNeeded();
+  await expect(reviews.getByText("Reviews are temporarily unavailable.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add to cart" })).toBeEnabled();
+});
+
+test("Judge.me empty responses never invent reviews or ratings", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "Third-party empty-state behavior is viewport-independent.");
+  await page.route("https://cdnwidget.judge.me/widget_preloader.js", (route) => route.fulfill({ contentType: "application/javascript", body: "window.jdgm = window.jdgm || {};" }));
+  await page.route("https://cdnwidget.judge.me/assets/installed.js", (route) => route.fulfill({
+    contentType: "application/javascript",
+    body: `window.jdgmCacheServer = { reloadAllWidgets() {
+      const widget = document.getElementById("judgeme_product_reviews");
+      if (widget) widget.innerHTML = '<div class="jdgm-rev-widg"><div class="jdgm-rev-widg__reviews"></div><p>No reviews yet</p></div>';
+    } };`,
+  }));
+  await page.goto("/products/celestial-staff");
+  const reviews = page.getByRole("region", { name: "Celestial Staff reviews" });
+  await reviews.scrollIntoViewIfNeeded();
+  await expect(reviews.getByText("No reviews yet.", { exact: true })).toBeVisible();
+  await expect(reviews.getByText(/first collector to share an honest review/i)).toBeVisible();
+  await expect(reviews.locator(".jdgm-rev")).toHaveCount(0);
+  await expectNoMaterialAxeViolations(page);
 });
 
 test("collection state is addressable in the URL", async ({ page }, testInfo) => {
