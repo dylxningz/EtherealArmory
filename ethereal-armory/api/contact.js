@@ -138,6 +138,38 @@ function json(response, status, body) {
   return response.status(status).json(body);
 }
 
+function sanitizeProviderDiagnostic(value, sensitiveValues) {
+  if (value === null || value === undefined || typeof value === "number" || typeof value === "boolean") return value ?? null;
+  if (Array.isArray(value)) return value.map((item) => sanitizeProviderDiagnostic(item, sensitiveValues));
+  if (typeof value === "object") {
+    return Object.fromEntries(Object.entries(value)
+      .filter(([key]) => !/authorization|api.?key|reply.?to|customer|html|text|phone/i.test(key))
+      .map(([key, item]) => [key, sanitizeProviderDiagnostic(item, sensitiveValues)]));
+  }
+
+  let sanitized = String(value)
+    .replace(/Bearer\s+\S+/gi, "[redacted-authorization]")
+    .replace(/\bre_[a-zA-Z0-9_-]+\b/g, "[redacted-api-key]")
+    .replace(/[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+/g, "[redacted-email]");
+  for (const sensitiveValue of sensitiveValues) {
+    if (sensitiveValue.length >= 3) sanitized = sanitized.replaceAll(sensitiveValue, "[redacted-submission-value]");
+  }
+  return sanitized;
+}
+
+function getProviderDiagnostics(error, submission, apiKey) {
+  const providerError = error && typeof error === "object" ? error : {};
+  const sensitiveValues = [apiKey, ...Object.values(submission)]
+    .filter((value) => typeof value === "string" && value);
+  return {
+    name: sanitizeProviderDiagnostic(providerError.name ?? null, sensitiveValues),
+    message: sanitizeProviderDiagnostic(providerError.message ?? "Resend returned no error message.", sensitiveValues),
+    statusCode: providerError.statusCode ?? null,
+    code: sanitizeProviderDiagnostic(providerError.code ?? null, sensitiveValues),
+    rawResponseBody: error ? sanitizeProviderDiagnostic(error, sensitiveValues) : null,
+  };
+}
+
 export function createContactHandler({
   createResendClient = (apiKey) => new Resend(apiKey),
   getEnvironment = () => process.env,
@@ -181,7 +213,16 @@ export function createContactHandler({
       });
 
       if (error || !data?.id) {
-        logger.error("Contact email provider rejected the submission.");
+        const diagnostics = getProviderDiagnostics(error, submission, apiKey);
+        logger.error("Contact email provider rejected the submission.", diagnostics);
+        if (environment.VERCEL_ENV === "preview") {
+          return json(response, 502, {
+            success: false,
+            provider: "resend",
+            providerCode: String(error?.code || error?.name || error?.statusCode || "unknown_error"),
+            providerMessage: String(error?.message || "Resend returned no error message."),
+          });
+        }
         return json(response, 502, { ok: false, message: "The inquiry could not be sent." });
       }
 
