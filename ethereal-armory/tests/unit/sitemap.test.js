@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import handler from "../../api/sitemap.js";
+import handler, { portfolioEntriesForProjects } from "../../api/sitemap.js";
+import { validPortfolioProject } from "../fixtures/portfolio-project.js";
 
 function responseRecorder() {
   return {
@@ -40,10 +41,20 @@ test("sitemap paginates beyond ten Shopify pages without silently omitting URLs"
     assert.equal(response.statusCode, 200);
     assert.equal(response.headers["Content-Type"], "application/xml; charset=utf-8");
     assert.match(response.body, /<loc>https:\/\/www\.etherealarmory\.com\/reviews<\/loc>/);
+    assert.match(response.body, /<loc>https:\/\/www\.etherealarmory\.com\/portfolio<\/loc>/);
+    assert.doesNotMatch(response.body, /<loc>https:\/\/www\.etherealarmory\.com\/portfolio\/<\/loc>/);
     assert.equal((response.body.match(/\/products\/product-\d+/g) || []).length, 11);
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test("Portfolio sitemap entries contain only validated project records", () => {
+  assert.deepEqual(portfolioEntriesForProjects([]), []);
+  assert.deepEqual(portfolioEntriesForProjects([validPortfolioProject]), [
+    { loc: "https://www.etherealarmory.com/portfolio/example-commission-study" },
+  ]);
+  assert.throws(() => portfolioEntriesForProjects([{ ...validPortfolioProject, slug: "Invalid Slug" }]), /Portfolio validation failed/);
 });
 
 test("sitemap fails safely instead of looping when Shopify repeats a cursor", async () => {

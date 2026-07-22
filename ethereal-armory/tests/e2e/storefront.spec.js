@@ -738,12 +738,14 @@ test("contact form remains usable without horizontal overflow", async ({ page })
   expect(metrics.documentWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1);
 });
 
-test("portfolio replaces the old project gallery with an accessible construction experience", async ({ page }, testInfo) => {
+test("portfolio presents an accessible, intentional empty archive without fake projects", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "390px", "Content behavior is viewport-independent.");
   await page.goto("/portfolio");
-  await expect(page.getByRole("heading", { name: "Portfolio Under Construction" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Selected Work" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Project case studies are currently being prepared." })).toBeVisible();
   await expect(page.getByText(/Celestial Mage Staff/)).toHaveCount(0);
-  const primary = page.getByRole("link", { name: "Shop available pieces" });
+  await expect(page.locator(".portfolio-card")).toHaveCount(0);
+  const primary = page.getByRole("link", { name: "Discuss a custom build" }).first();
   await expect(primary).toBeVisible();
   const box = await primary.boundingBox();
   expect(box.height).toBeGreaterThanOrEqual(44);

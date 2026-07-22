@@ -119,7 +119,7 @@ export default function HomePage() {
         <ol className="commission-steps">{commissionSteps.map(([number, title, text]) => <li key={number}><span>{number}</span><h3>{title}</h3><p>{text}</p></li>)}</ol>
       </section>
 
-      <section className="final-cta section-shell"><div><p className="overline">Your idea, made physical</p><h2>Commission something worthy of legend.</h2><p>Bring a character weapon, display concept, or original fantasy design to the studio.</p></div><div className="button-row"><Link className="button button-primary" to="/contact">Begin an inquiry</Link><Link className="button button-secondary" to="/portfolio">View custom work</Link></div></section>
+      <section className="final-cta section-shell"><div><p className="overline">Your idea, made physical</p><h2>Commission something worthy of legend.</h2><p>Bring a character weapon, display concept, or original fantasy design to the studio.</p></div><div className="button-row"><Link className="button button-primary" to="/contact">Begin an inquiry</Link><Link className="button button-secondary" to="/portfolio">Explore selected work</Link></div></section>
     </main>
   );
 }

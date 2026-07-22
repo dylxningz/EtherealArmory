@@ -11,6 +11,7 @@ const ProductPage = lazy(() => import("./pages/ProductPage"));
 const AboutPage = lazy(() => import("./pages/AboutPage"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
 const PortfolioPage = lazy(() => import("./pages/PortfolioPage"));
+const PortfolioDetailPage = lazy(() => import("./pages/PortfolioDetailPage"));
 const ReviewsPage = lazy(() => import("./pages/ReviewsPage"));
 const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
 const TermsPage = lazy(() => import("./pages/TermsPage"));
@@ -36,6 +37,7 @@ export default function App() {
               <Route path="about" element={<AboutPage />} />
               <Route path="contact" element={<ContactPage />} />
               <Route path="portfolio" element={<PortfolioPage />} />
+              <Route path="portfolio/:slug" element={<PortfolioDetailPage />} />
               <Route path="reviews" element={<ReviewsPage />} />
               <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
               <Route path="terms-of-service" element={<TermsPage />} />

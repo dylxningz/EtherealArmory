@@ -1,3 +1,6 @@
+import { portfolioProjects } from "../src/data/portfolioProjects.js";
+import { validatePortfolioProjects } from "../src/lib/portfolio.js";
+
 const SITE_URL = "https://www.etherealarmory.com";
 const STATIC_PATHS = [
   "",
@@ -14,6 +17,10 @@ const STATIC_PATHS = [
 
 function escapeXml(value) {
   return String(value).replace(/[<>&'"]/g, (character) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" })[character]);
+}
+
+export function portfolioEntriesForProjects(projects) {
+  return validatePortfolioProjects(projects).map((project) => ({ loc: `${SITE_URL}/portfolio/${project.slug}` }));
 }
 
 async function fetchHandles(type, domain, token, version) {
@@ -55,6 +62,11 @@ export default async function handler(request, response) {
   const token = process.env.VITE_SHOPIFY_STOREFRONT_TOKEN;
   const version = process.env.VITE_SHOPIFY_API_VERSION || "2025-10";
   let entries = STATIC_PATHS.map((path) => ({ loc: `${SITE_URL}${path}` }));
+  try {
+    entries = entries.concat(portfolioEntriesForProjects(portfolioProjects));
+  } catch (error) {
+    console.error("Portfolio sitemap entries were omitted:", error.message);
+  }
 
   if (domain && token) {
     try {
