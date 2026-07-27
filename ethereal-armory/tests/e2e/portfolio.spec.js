@@ -4,11 +4,42 @@ import { minimalPortfolioProject, validPortfolioProject } from "../fixtures/port
 
 const require = createRequire(import.meta.url);
 const axePath = require.resolve("axe-core/axe.min.js");
+const fittingMedia = [
+  { src: "/test-product-portrait.svg", alt: "Test portrait gallery image", width: 600, height: 1000 },
+  { src: "/test-product-landscape.svg", alt: "Test landscape gallery image", width: 1200, height: 600 },
+  { src: "/test-product-square.svg", alt: "Test square gallery image", width: 800, height: 800 },
+];
+const fittingProject = {
+  ...validPortfolioProject,
+  slug: "gallery-fitting-study",
+  title: "Gallery Fitting Study",
+  heroMedia: fittingMedia[0],
+  gallery: fittingMedia,
+  seo: {
+    title: "Gallery Fitting Study",
+    description: "A test-only project covering portrait, landscape, and square Portfolio media.",
+  },
+};
 
 async function useProjects(page, projects) {
   await page.addInitScript((fixtureProjects) => {
     window.__EA_PORTFOLIO_TEST_PROJECTS__ = fixtureProjects;
   }, projects);
+}
+
+async function mockFittingMedia(page) {
+  await page.route("**/test-product-*.svg*", async (route) => {
+    const url = route.request().url();
+    const dimensions = url.includes("portrait")
+      ? { width: 600, height: 1000, color: "#8f698f" }
+      : url.includes("landscape")
+        ? { width: 1200, height: 600, color: "#54778f" }
+        : { width: 800, height: 800, color: "#8f7654" };
+    await route.fulfill({
+      contentType: "image/svg+xml",
+      body: `<svg xmlns="http://www.w3.org/2000/svg" width="${dimensions.width}" height="${dimensions.height}" viewBox="0 0 ${dimensions.width} ${dimensions.height}"><rect width="100%" height="100%" fill="${dimensions.color}"/><path d="M0 0L${dimensions.width} ${dimensions.height}M${dimensions.width} 0L0 ${dimensions.height}" stroke="#f2dfb4" stroke-width="20"/></svg>`,
+    });
+  });
 }
 
 async function expectNoMaterialAxeViolations(page) {
@@ -17,6 +48,35 @@ async function expectNoMaterialAxeViolations(page) {
   const violations = await page.evaluate(async () => (await window.axe.run(document)).violations);
   const material = violations.filter((violation) => ["serious", "critical"].includes(violation.impact));
   expect(material, material.map((violation) => `${violation.id}: ${violation.help}`).join("\n")).toEqual([]);
+}
+
+async function expectContainedMedia(frame, image) {
+  await expect.poll(() => image.evaluate((element) => element.complete && element.naturalWidth > 0)).toBe(true);
+  const metrics = await image.evaluate((element) => {
+    const frameRect = element.parentElement.getBoundingClientRect();
+    const imageRect = element.getBoundingClientRect();
+    const styles = getComputedStyle(element);
+    const scale = Math.min(frameRect.width / element.naturalWidth, frameRect.height / element.naturalHeight);
+    return {
+      frame: { width: frameRect.width, height: frameRect.height },
+      image: { width: imageRect.width, height: imageRect.height },
+      content: { width: element.naturalWidth * scale, height: element.naturalHeight * scale },
+      natural: { width: element.naturalWidth, height: element.naturalHeight },
+      objectFit: styles.objectFit,
+      objectPosition: styles.objectPosition,
+    };
+  });
+
+  expect(metrics.objectFit).toBe("contain");
+  expect(metrics.objectPosition).toBe("50% 50%");
+  expect(metrics.natural.width).toBeGreaterThan(0);
+  expect(metrics.natural.height).toBeGreaterThan(0);
+  expect(Math.abs(metrics.image.width - metrics.frame.width)).toBeLessThanOrEqual(3);
+  expect(Math.abs(metrics.image.height - metrics.frame.height)).toBeLessThanOrEqual(3);
+  expect(metrics.content.width).toBeLessThanOrEqual(metrics.frame.width + 1);
+  expect(metrics.content.height).toBeLessThanOrEqual(metrics.frame.height + 1);
+  await expect(frame).toBeVisible();
+  return metrics.frame;
 }
 
 test("zero-project Portfolio renders an intentional empty state with no fake cards and complete SEO", async ({ page }, testInfo) => {
@@ -58,6 +118,16 @@ test("published Celestial Staff card and detail route include complete metadata 
   await expect(page.getByRole("heading", { level: 2, name: "Fabrication and finish details" })).toBeVisible();
   const finalSelection = page.getByLabel("Final gallery image selection");
   await expect(finalSelection.getByRole("button")).toHaveCount(6);
+  const finalStage = page.locator(".portfolio-gallery").first().locator(".portfolio-gallery-stage");
+  const finalStageImage = finalStage.locator("img");
+  const stableFrame = await expectContainedMedia(finalStage, finalStageImage);
+  for (let index = 0; index < 6; index += 1) {
+    await finalSelection.getByRole("button").nth(index).click();
+    await expect(finalStageImage).toHaveAttribute("alt", /Celestial Staff|Upper section|Lower section|finished silver blade|hanging ornament|Finished Celestial Staff components/i);
+    const currentFrame = await expectContainedMedia(finalStage, finalStageImage);
+    expect(Math.abs(currentFrame.width - stableFrame.width)).toBeLessThanOrEqual(1);
+    expect(Math.abs(currentFrame.height - stableFrame.height)).toBeLessThanOrEqual(1);
+  }
   const secondFinalImage = finalSelection.getByRole("button").nth(1);
   await secondFinalImage.click();
   await expect(secondFinalImage).toHaveAttribute("aria-pressed", "true");
@@ -74,6 +144,50 @@ test("published Celestial Staff card and detail route include complete metadata 
   expect(structuredData.join("\n")).toContain("Celestial Staff");
   expect(structuredData.join("\n")).toContain("BreadcrumbList");
   expect(externalDataRequests).toBe(0);
+});
+
+test("portrait, landscape, and square media remain fully contained in stable frames", async ({ page }, testInfo) => {
+  const requiredWidths = new Set(["320px", "375px", "768px", "1024px", "1440px", "2560px"]);
+  test.skip(!requiredWidths.has(testInfo.project.name), "Media fitting is measured at the requested responsive widths.");
+  await mockFittingMedia(page);
+  await useProjects(page, [fittingProject]);
+
+  await page.goto(`/portfolio/${fittingProject.slug}`);
+  const heroFrame = page.locator(".portfolio-project-hero-media");
+  await expectContainedMedia(heroFrame, heroFrame.locator("img"));
+
+  const gallery = page.locator(".portfolio-gallery").first();
+  const stage = gallery.locator(".portfolio-gallery-stage");
+  const stageImage = stage.locator("img");
+  const selection = page.getByLabel("Final gallery image selection");
+  const initialFrame = await expectContainedMedia(stage, stageImage);
+
+  for (const [index, media] of fittingMedia.entries()) {
+    await selection.getByRole("button").nth(index).click();
+    await expect(stageImage).toHaveAttribute("alt", media.alt);
+    const currentFrame = await expectContainedMedia(stage, stageImage);
+    expect(Math.abs(currentFrame.width - initialFrame.width)).toBeLessThanOrEqual(1);
+    expect(Math.abs(currentFrame.height - initialFrame.height)).toBeLessThanOrEqual(1);
+  }
+
+  await stage.click();
+  const dialog = page.getByRole("dialog", { name: "Final gallery image viewer" });
+  const lightboxFrame = dialog.locator(".portfolio-lightbox-image");
+  await expect(dialog).toBeVisible();
+  await expectContainedMedia(lightboxFrame, lightboxFrame.locator("img"));
+  await page.keyboard.press("ArrowLeft");
+  await expect(lightboxFrame.locator("img")).toHaveAttribute("alt", fittingMedia[1].alt);
+  await expectContainedMedia(lightboxFrame, lightboxFrame.locator("img"));
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(stage).toBeFocused();
+
+  const widths = await page.evaluate(() => ({ client: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth }));
+  expect(widths.scroll).toBeLessThanOrEqual(widths.client + 1);
+
+  await page.goto("/portfolio");
+  const cardMedia = page.locator(".portfolio-card-media");
+  await expectContainedMedia(cardMedia, cardMedia.locator("img"));
 });
 
 test("PortfolioCard and detail route render a valid local fixture without commerce or review requests", async ({ page }, testInfo) => {
