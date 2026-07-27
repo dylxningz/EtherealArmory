@@ -51,6 +51,7 @@ export const INQUIRY_MODES = Object.freeze([
 ]);
 
 const MEDIA_TYPES = Object.freeze(["image", "render", "cad", "process", "video", "model-poster"]);
+const MEDIA_PERMISSION_STATUSES = Object.freeze(["confirmed", "not-required"]);
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const URL_PATTERN = /^https:\/\//i;
 const LOCAL_PATH_PATTERN = /^\/(?!\/)[a-z0-9][a-z0-9/_.-]*$/i;
@@ -161,6 +162,7 @@ export function validateMediaRecord(media, field = "media") {
   for (const key of ["caption", "credit"]) {
     if (media[key] != null && (typeof media[key] !== "string" || !media[key].trim())) errors.push(`${field}.${key}: must be a non-empty string when provided.`);
   }
+  if (media.permissionStatus != null && !MEDIA_PERMISSION_STATUSES.includes(media.permissionStatus)) errors.push(`${field}.permissionStatus: "${media.permissionStatus}" is not supported.`);
   validateSources(media.sources, field, errors);
   return errors;
 }
@@ -282,7 +284,7 @@ export function validatePortfolioProjects(projects) {
       return;
     }
     for (const field of ["slug", "title", "projectSummary", "contribution", "finalOutcome"]) addRequiredString(errors, project, index, field);
-    for (const field of ["subtitle", "clientType", "clientName", "clientBrief", "inspiration", "originalConcept", "projectOverview", "electronics", "dimensions", "buildTime", "lessonsLearned", "contentWarnings"]) addOptionalString(errors, project, index, field);
+    for (const field of ["subtitle", "clientType", "clientName", "clientBrief", "inspiration", "originalConcept", "projectOverview", "electronics", "dimensions", "buildTime", "lessonsLearned", "disclosureStatement", "contentWarnings"]) addOptionalString(errors, project, index, field);
 
     if (typeof project.slug === "string") {
       if (!SLUG_PATTERN.test(project.slug)) errors.push(`${name}.slug: must use lowercase kebab-case.`);
@@ -305,7 +307,7 @@ export function validatePortfolioProjects(projects) {
 
     errors.push(...validateMediaRecord(project.heroMedia, `${name}.heroMedia`));
     validateMediaArray(project.gallery, `${name}.gallery`, errors, true);
-    for (const field of ["conceptArt", "cadImages", "renders", "videos"]) {
+    for (const field of ["workingImages", "designImages", "conceptArt", "cadImages", "renders", "videos"]) {
       if (project[field] != null) validateMediaArray(project[field], `${name}.${field}`, errors);
     }
     for (const field of ["designRole", "fabricationRole", "designGoals", "designConstraints", "creativeDecisions", "challenges", "solutions", "software", "materials", "printers", "tools", "printMethods", "fabricationMethods", "finishingMethods", "tags", "credits"]) {

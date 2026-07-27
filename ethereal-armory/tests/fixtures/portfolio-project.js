@@ -69,6 +69,15 @@ export const validPortfolioProject = {
       caption: "Secondary fixture image.",
     },
   ],
+  workingImages: [{
+    ...minimalPortfolioProject.gallery[0],
+    alt: "Test-only working process view",
+    type: "process",
+  }],
+  designImages: [{
+    ...minimalPortfolioProject.gallery[0],
+    alt: "Test-only design development view",
+  }],
   inquiry: {
     mode: "related-custom-work",
     category: "Original fantasy prop",

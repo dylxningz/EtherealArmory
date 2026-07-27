@@ -1,0 +1,76 @@
+{
+  "slug": "project-slug",
+  "title": "Verified project title",
+  "projectType": "client-commission",
+  "category": "handheld-prop",
+  "creativeOrigin": "original",
+  "status": "completed",
+  "clientDisclosure": "anonymous-with-permission",
+  "projectSummary": "Concise verified summary of the creative work.",
+  "contribution": "Clear statement of what Ethereal Armory designed or fabricated.",
+  "finalOutcome": "Verified result and what the work demonstrated.",
+  "seo": {
+    "title": "Verified project SEO title",
+    "description": "Verified project description for search and social sharing."
+  },
+  "featured": false,
+  "developmentStage": "final",
+  "commercialHistory": "not-applicable",
+  "subtitle": null,
+  "yearCompleted": null,
+  "projectOverview": null,
+  "clientType": null,
+  "clientName": null,
+  "clientBrief": null,
+  "inspiration": null,
+  "originalConcept": null,
+  "designRole": [],
+  "fabricationRole": [],
+  "designGoals": [],
+  "designConstraints": [],
+  "creativeDecisions": [],
+  "challenges": [],
+  "solutions": [],
+  "software": [],
+  "materials": [],
+  "printers": [],
+  "tools": [],
+  "printMethods": [],
+  "fabricationMethods": [],
+  "finishingMethods": [],
+  "electronics": null,
+  "dimensions": null,
+  "buildTime": null,
+  "processStages": [],
+  "lessonsLearned": null,
+  "disclosureStatement": null,
+  "tags": [],
+  "credits": [],
+  "contentWarnings": null,
+  "hero": null,
+  "imageOrder": {
+    "final": [],
+    "working": [],
+    "design": []
+  },
+  "media": {
+    "final/example-image.webp": {
+      "alt": "Meaningful description of the approved image",
+      "caption": "Optional verified context.",
+      "credit": "Optional verified credit.",
+      "permissionStatus": "confirmed"
+    }
+  },
+  "model3d": null,
+  "modelPoster": null,
+  "testimonialReference": null,
+  "inquiry": {
+    "mode": "none",
+    "category": null,
+    "note": null
+  },
+  "externalReferences": {
+    "shopifyProduct": null,
+    "etsyArchive": null
+  }
+}

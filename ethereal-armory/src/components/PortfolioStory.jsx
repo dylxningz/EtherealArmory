@@ -37,6 +37,7 @@ export function ProjectFacts({ project }) {
     ["Electronics", project.electronics],
     ["Dimensions", project.dimensions],
     ["Build time", project.buildTime],
+    ["Credits", project.credits?.join(", ")],
   ].filter(([, value]) => value);
   if (!facts.length) return null;
   return (

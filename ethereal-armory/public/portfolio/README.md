@@ -1,52 +1,58 @@
-# Portfolio media
+# Portfolio project folders
 
-Create one lowercase kebab-case directory per verified project:
+Each publishable project is a self-contained directory:
 
 ```text
 public/portfolio/project-slug/
+  project.json
   final/
-  process/
-  cad/
-  renders/
-  model/
-  video/
+  working/  # optional
+  design/   # optional
 ```
 
-Do not add placeholder media.
+The build-time manifest scans these folders. A project is publishable only when:
+
+- `project.json` exists, parses, and passes the Portfolio schema
+- The folder name and `slug` match
+- `final/` contains at least one readable supported image
+- Configured hero, ordering, and media metadata point to discovered files
+
+Invalid project directories are removed from deployable `dist` after the production build, so incomplete metadata and media are not published accidentally.
+
+Supported images are AVIF, JPEG, PNG, and WebP. `working/` and `design/` are optional and do not render when missing or empty.
+
+## Discovery and ordering
+
+Images are discovered automatically; do not manually duplicate every image in a central registry. With no `imageOrder`, filenames sort alphabetically using a deterministic case-normalized comparison. File modification time is never used.
+
+With no explicit `hero`, the first ordered `final/` image is used. `project.json` may optionally provide hero selection, group ordering, alt text, captions, credits, and a `confirmed` or `not-required` permission status.
 
 ## Naming
 
-- Lowercase kebab-case
-- No spaces
-- Describe the image's purpose
-- Include output width where useful
-- Add a revision suffix when replacing immutable assets
+- Use lowercase URL-safe filenames with no spaces.
+- Describe the image purpose without making unsupported claims.
+- Include output width where helpful.
+- Use a revision suffix when replacing an immutable public asset.
 
 Examples:
 
 - `hero-1600-v1.webp`
 - `final-left-profile-1200-v1.avif`
-- `process-primer-stage-1200-v1.webp`
+- `prototype-fit-check-1200-v1.webp`
 - `cad-assembly-section-1600-v1.webp`
-- `model-poster-1600-v1.webp`
 
-## Images
+## Image preparation
 
-- Prefer AVIF or WebP and keep a tested fallback where necessary.
-- Export responsive sizes rather than serving the original photograph everywhere.
-- A practical starting set is 640, 960, 1280, and 1600 pixels wide.
-- Record intrinsic width and height in the project registry to prevent layout shift.
-- Write alt text for the visual information that matters to the project story.
-- Use captions for process context, not as a substitute for alt text.
-- Keep final images near 100-250 KB on mobile and 200-500 KB at larger sizes where quality permits.
+- Prefer AVIF or WebP; use JPEG or PNG where appropriate.
+- Export an appropriately sized web image rather than an original camera file.
+- A practical maximum long edge is 1600–2000 pixels.
+- Aim near 100–250 KB for compact media and 200–500 KB for large editorial media where quality permits.
+- Supply tailored alt text for visual information that matters to the story.
+- Use captions for context, not as a substitute for alt text.
+- Add only media whose publication rights have been confirmed.
 
-## Video and GLB
+Do not add a client-supplied reference image unless explicit publication permission exists.
 
-- Add captions or transcripts for meaningful spoken content.
-- Do not autoplay process or turntable video.
-- GLBs must be optimized, non-printable presentation meshes with hidden/internal geometry removed.
-- Keep STL, STEP, 3MF, CAD masters, uncompressed source photography, and client-confidential files outside the deployed repository.
-- Require a model poster and static image fallback.
-- Target 2-3 MB per GLB and treat 5 MB as an upper budget, subject to real-device testing.
+Keep STL, STEP, 3MF, CAD masters, printable geometry, uncompressed source photography, confidential client files, and unapproved references outside the deployed repository.
 
-Public files are not automatically content-hashed. Use revisioned filenames before applying long-lived immutable caching.
+Public files are not automatically content-hashed. Use versioned filenames before applying long-lived immutable caching.

@@ -96,6 +96,8 @@ export default function PortfolioDetailPage() {
       <ProjectOverview project={project} />
       <ProjectRoles project={project} />
       <NarrativeLists project={project} />
+      <MediaSection title="Working process" overline="In progress" media={project.workingImages} />
+      <MediaSection title="Design development" overline="Design work" media={project.designImages} />
       <MediaSection title="Concept development" overline="Early direction" media={project.conceptArt} />
       <MediaSection title="CAD and modeling" overline="Digital development" media={project.cadImages} />
       <MediaSection title="Renders" overline="Visualization" media={project.renders} />
@@ -105,6 +107,7 @@ export default function PortfolioDetailPage() {
       <PortfolioModelPreview model={project.model3d} poster={project.modelPoster} />
 
       <section className="portfolio-final-outcome" aria-labelledby="portfolio-outcome-title"><p className="overline">Final outcome</p><h2 id="portfolio-outcome-title">What the project demonstrated</h2><p>{project.finalOutcome}</p></section>
+      {project.disclosureStatement && <section className="portfolio-lessons" aria-labelledby="portfolio-disclosure-title"><p className="overline">Project disclosure</p><h2 id="portfolio-disclosure-title">Creative attribution</h2><p>{project.disclosureStatement}</p></section>}
       {project.lessonsLearned && <section className="portfolio-lessons" aria-labelledby="portfolio-lessons-title"><p className="overline">Reflection</p><h2 id="portfolio-lessons-title">Lessons learned</h2><p>{project.lessonsLearned}</p></section>}
       <ExternalReferences references={project.externalReferences} />
 

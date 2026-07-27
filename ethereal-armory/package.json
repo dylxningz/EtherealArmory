@@ -4,11 +4,16 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "portfolio:manifest": "node scripts/build-portfolio-manifest.js",
+    "predev": "npm run portfolio:manifest",
     "dev": "vite",
+    "prebuild": "npm run portfolio:manifest",
     "build": "vite build",
+    "postbuild": "node scripts/prune-invalid-portfolio.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "npm run test:unit && npm run test:e2e",
+    "pretest:unit": "npm run portfolio:manifest",
     "test:unit": "node --test tests/unit/*.test.js",
     "test:e2e": "playwright test"
   },

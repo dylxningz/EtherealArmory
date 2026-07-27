@@ -29,7 +29,7 @@ test("zero-project Portfolio renders an intentional empty state with no fake car
   await expect(page.getByRole("heading", { level: 1, name: "Selected Work" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Project case studies are currently being prepared." })).toBeVisible();
   await expect(page.locator(".portfolio-card")).toHaveCount(0);
-  await expect(page.getByText("Celestial Mage Staff")).toHaveCount(0);
+  await expect(page.getByText("Celestial Staff")).toHaveCount(0);
   await expect(page).toHaveTitle("Portfolio | Ethereal Armory");
   await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /Selected custom commissions/);
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://www.etherealarmory.com/portfolio");
@@ -58,6 +58,8 @@ test("PortfolioCard and detail route render a valid local fixture without commer
   await expect(page.getByRole("heading", { name: "What the studio created" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "What the project demonstrated" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Design and fabrication roles" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Working process" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Design development" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Process timeline" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Discuss a custom build" })).toHaveAttribute("href", /source=portfolio.*project=example-commission-study/);
   expect(await page.locator('script[type="application/ld+json"]').evaluate((script) => script.textContent)).toContain("BreadcrumbList");
@@ -69,7 +71,7 @@ test("project detail omits every unavailable optional section cleanly", async ({
   await useProjects(page, [minimalPortfolioProject]);
   await page.goto(`/portfolio/${minimalPortfolioProject.slug}`);
   await expect(page.getByRole("heading", { level: 1, name: minimalPortfolioProject.title })).toBeVisible();
-  for (const heading of ["Design and fabrication roles", "Design goals", "Process timeline", "Challenges and solutions", "Three-dimensional model", "Lessons learned", "Have a related idea?"]) {
+  for (const heading of ["Design and fabrication roles", "Design goals", "Working process", "Design development", "Process timeline", "Challenges and solutions", "Three-dimensional model", "Lessons learned", "Have a related idea?"]) {
     await expect(page.getByRole("heading", { name: heading })).toHaveCount(0);
   }
   await expect(page.getByText("N/A", { exact: true })).toHaveCount(0);
@@ -97,9 +99,11 @@ test("gallery selection, announcements, keyboard focus, and lightbox controls ar
 
 test("unknown Portfolio slugs use the existing crawl-safe 404", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "390px", "Unknown-route behavior is viewport-independent.");
-  await page.goto("/portfolio/not-a-project");
-  await expect(page.getByRole("heading", { name: "This artifact cannot be found." })).toBeVisible();
-  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex,follow");
+  for (const slug of ["not-a-project", "celestial-staff"]) {
+    await page.goto(`/portfolio/${slug}`);
+    await expect(page.getByRole("heading", { name: "This artifact cannot be found." })).toBeVisible();
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex,follow");
+  }
 });
 
 test("empty and populated Portfolio routes have no material Axe violations", async ({ page }, testInfo) => {

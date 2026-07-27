@@ -1,7 +1,8 @@
 import { createPortfolioRegistry } from "../lib/portfolio.js";
+import { portfolioProjects as generatedPortfolioProjects } from "./portfolioManifest.generated.js";
 
-// This is the canonical Portfolio content source. Add only verified projects.
-export const portfolioProjects = Object.freeze([]);
+// Production content is generated from public/portfolio/*/project.json and media folders.
+export const portfolioProjects = generatedPortfolioProjects;
 export const portfolioRegistry = createPortfolioRegistry(portfolioProjects);
 
 export function getPortfolioRegistry() {

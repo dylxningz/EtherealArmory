@@ -56,6 +56,7 @@ test("media requires meaningful alt text and positive dimensions", () => {
   expectInvalid([copyProject({ heroMedia: { ...validPortfolioProject.heroMedia, width: 0 } })], /heroMedia.width: must be a positive integer/);
   expectInvalid([copyProject({ gallery: [{ ...validPortfolioProject.gallery[0], height: -10 }] })], /gallery\[0\]\.height: must be a positive integer/);
   expectInvalid([copyProject({ heroMedia: { ...validPortfolioProject.heroMedia, src: "javascript:alert(1)" } })], /heroMedia.src: must be an HTTPS URL or root-relative path/);
+  expectInvalid([copyProject({ heroMedia: { ...validPortfolioProject.heroMedia, permissionStatus: "pending" } })], /heroMedia.permissionStatus: "pending" is not supported/);
 });
 
 test("client names require explicit naming permission", () => {

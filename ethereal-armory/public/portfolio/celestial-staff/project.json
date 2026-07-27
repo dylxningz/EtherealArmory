@@ -1,0 +1,108 @@
+{
+  "slug": "celestial-staff",
+  "title": "Celestial Staff",
+  "projectType": "client-commission",
+  "category": "handheld-prop",
+  "creativeOrigin": "client-supplied-concept",
+  "status": "completed",
+  "featured": true,
+  "developmentStage": "final",
+  "commercialHistory": "one-off-client-work",
+  "clientDisclosure": "partial-disclosure",
+  "projectSummary": "The Celestial Staff was a custom prop commission designed, fabricated, painted, and finished by Ethereal Armory. A client-supplied reference image was the starting point for developing a complete physical staff design.",
+  "projectOverview": "The client reached out with a reference image of a staff they wanted brought to life. Ethereal Armory recreated and adapted the design in Fusion 360 so it could be manufactured as a physical prop. Rough test prints allowed the client to review the form, proportions, and overall direction before final production. After approval, the final components were printed, assembled, prepared, painted, finished, packaged, and shipped.",
+  "clientBrief": "Bring a staff shown in a client-supplied reference image to life as a complete physical prop.",
+  "contribution": "Ethereal Armory handled client communication and planning, reference interpretation, Fusion 360 modeling, manufacturing adaptation, prototyping, test and final printing, revisions, assembly, surface preparation, painting, finishing, packaging, and fulfillment.",
+  "designRole": [
+    "Client communication and planning",
+    "Reference interpretation",
+    "Fusion 360 modeling",
+    "Design adaptation for manufacturing",
+    "Revisions based on client feedback"
+  ],
+  "fabricationRole": [
+    "Rough prototyping",
+    "Test printing",
+    "Final printing",
+    "Assembly",
+    "Surface preparation",
+    "Painting",
+    "Finishing",
+    "Packaging and fulfillment"
+  ],
+  "challenges": [
+    "Translating a single reference image into a complete physical object that retained the intended visual design while also being printable, stable, and practical to assemble."
+  ],
+  "solutions": [
+    "The staff was developed in Fusion 360 and tested using rough prototype prints so its proportions and construction approach could be reviewed before final production. Client approvals were collected throughout the process."
+  ],
+  "finalOutcome": "A fully designed, printed, assembled, painted, and finished Celestial Staff was completed and shipped to the client.",
+  "software": [
+    "Fusion 360"
+  ],
+  "printMethods": [
+    "3D printing"
+  ],
+  "fabricationMethods": [
+    "Rough prototyping",
+    "Test printing",
+    "Final printing",
+    "Assembly",
+    "Packaging and fulfillment"
+  ],
+  "finishingMethods": [
+    "Surface preparation",
+    "Painting",
+    "Finishing"
+  ],
+  "buildTime": "Approximately two months",
+  "processStages": [
+    {
+      "title": "Design development",
+      "description": "The client-supplied reference image was interpreted and adapted in Fusion 360 as a complete, manufacturable staff design."
+    },
+    {
+      "title": "Prototype and review",
+      "description": "Rough test prints were produced so the client could review the form, proportions, and design direction before approving final production."
+    },
+    {
+      "title": "Final fabrication",
+      "description": "The approved components were printed, assembled, surface-prepared, painted, and finished."
+    },
+    {
+      "title": "Delivery preparation",
+      "description": "The completed Celestial Staff was packaged and shipped to the client."
+    }
+  ],
+  "disclosureStatement": "This was a custom commission developed from a reference image supplied by the client. Ethereal Armory was responsible for the CAD interpretation, engineering, fabrication, painting, finishing, and production of the physical prop. The original reference artwork was not created by Ethereal Armory.",
+  "tags": [
+    "Custom Commission",
+    "Fantasy Prop",
+    "Staff",
+    "Fusion 360",
+    "3D Printing",
+    "Prop Making",
+    "Hand Painted",
+    "Client Work"
+  ],
+  "credits": [
+    "Designer and maker: Dylan Greene / Ethereal Armory"
+  ],
+  "inquiry": {
+    "mode": "related-custom-work",
+    "category": "Custom prop commission",
+    "note": "Have an idea you want brought to life? Request a custom commission."
+  },
+  "externalReferences": {
+    "shopifyProduct": null,
+    "etsyArchive": null
+  },
+  "testimonialReference": null,
+  "model3d": null,
+  "modelPoster": null,
+  "seo": {
+    "title": "Celestial Staff Custom Prop Commission",
+    "description": "A Celestial Staff commission designed in Fusion 360, prototyped, fabricated, painted, finished, and shipped by Ethereal Armory."
+  },
+  "media": {}
+}
