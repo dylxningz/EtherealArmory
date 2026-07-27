@@ -259,6 +259,28 @@ test("unknown Portfolio slugs use the existing crawl-safe 404", async ({ page },
   }
 });
 
+test("underscore-prefixed authoring projects stay absent from routes and metadata", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "Authoring-only exclusion is viewport-independent.");
+
+  await page.goto("/portfolio");
+  await expect(page.locator(".portfolio-card")).toHaveCount(1);
+  await expect(page.getByText("_example-project", { exact: false })).toHaveCount(0);
+  await expect(page.getByText("REPLACE:", { exact: false })).toHaveCount(0);
+
+  await page.goto("/portfolio/_example-project");
+  await expect(page.getByRole("heading", { name: "This artifact cannot be found." })).toBeVisible();
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex,follow");
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(0);
+  await expect(page.locator('meta[property^="og:"]')).toHaveCount(0);
+  await expect(page.locator('meta[name^="twitter:"]')).toHaveCount(0);
+  await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toHaveCount(0);
+
+  await page.goto("/portfolio");
+  await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute("content", "Ethereal Armory");
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://www.etherealarmory.com/portfolio");
+});
+
 test("empty and populated Portfolio routes have no material Axe violations", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "390px", "Axe runs once at a representative mobile width.");
   await useProjects(page, []);

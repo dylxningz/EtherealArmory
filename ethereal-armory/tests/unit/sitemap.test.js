@@ -44,6 +44,7 @@ test("sitemap paginates beyond ten Shopify pages without silently omitting URLs"
     assert.match(response.body, /<loc>https:\/\/www\.etherealarmory\.com\/portfolio<\/loc>/);
     assert.doesNotMatch(response.body, /<loc>https:\/\/www\.etherealarmory\.com\/portfolio\/<\/loc>/);
     assert.match(response.body, /<loc>https:\/\/www\.etherealarmory\.com\/portfolio\/celestial-staff<\/loc>/);
+    assert.doesNotMatch(response.body, /_example-project|REPLACE:/);
     assert.equal((response.body.match(/\/products\/product-\d+/g) || []).length, 11);
   } finally {
     globalThis.fetch = originalFetch;

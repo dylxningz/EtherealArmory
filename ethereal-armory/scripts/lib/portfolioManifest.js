@@ -1,13 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
-import { validatePortfolioProjects } from "../../src/lib/portfolio.js";
+import { isPortfolioAuthoringFolder, validatePortfolioProjects } from "../../src/lib/portfolio.js";
 
 export const PORTFOLIO_IMAGE_EXTENSIONS = Object.freeze([".avif", ".jpeg", ".jpg", ".png", ".webp"]);
 export const PORTFOLIO_MEDIA_GROUPS = Object.freeze(["final", "working", "design"]);
 export const PORTFOLIO_PERMISSION_STATUSES = Object.freeze(["confirmed", "not-required"]);
 
 const SAFE_FILE_NAME = /^[a-z0-9][a-z0-9._-]*$/;
-const PROJECT_JSON_FIELDS = new Set([
+export const PORTFOLIO_PROJECT_JSON_FIELDS = Object.freeze([
   "slug", "title", "projectType", "category", "creativeOrigin", "status", "clientDisclosure",
   "projectSummary", "contribution", "finalOutcome", "seo", "subtitle", "featured", "yearCompleted",
   "developmentStage", "commercialHistory", "clientType", "clientName", "clientBrief", "inspiration",
@@ -18,6 +18,7 @@ const PROJECT_JSON_FIELDS = new Set([
   "modelPoster", "testimonialReference", "inquiry", "externalReferences", "tags", "credits",
   "contentWarnings", "hero", "imageOrder", "media",
 ]);
+const PROJECT_JSON_FIELDS = new Set(PORTFOLIO_PROJECT_JSON_FIELDS);
 
 function stableFileSort(left, right) {
   const normalizedLeft = left.toLowerCase();
@@ -201,11 +202,13 @@ function readProject(projectRoot, folderName) {
 }
 
 export function buildPortfolioManifest(portfolioRoot) {
-  if (!fs.existsSync(portfolioRoot)) return { projects: [], issues: [] };
-  const projectFolders = fs.readdirSync(portfolioRoot, { withFileTypes: true })
+  if (!fs.existsSync(portfolioRoot)) return { projects: [], issues: [], authoringFolders: [] };
+  const allFolders = fs.readdirSync(portfolioRoot, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort(stableFileSort);
+  const authoringFolders = allFolders.filter(isPortfolioAuthoringFolder);
+  const projectFolders = allFolders.filter((folderName) => !isPortfolioAuthoringFolder(folderName));
   const projects = [];
   const issues = [];
 
@@ -218,5 +221,5 @@ export function buildPortfolioManifest(portfolioRoot) {
   }
 
   validatePortfolioProjects(projects);
-  return { projects, issues };
+  return { projects, issues, authoringFolders };
 }

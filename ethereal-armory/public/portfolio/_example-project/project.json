@@ -1,0 +1,143 @@
+{
+  "slug": "replace-project-slug",
+  "title": "REPLACE: Project title",
+  "subtitle": "REPLACE: Optional short project subtitle; remove this field when unused",
+  "projectType": "studio-original",
+  "category": "other",
+  "creativeOrigin": "original",
+  "status": "completed",
+  "featured": false,
+  "developmentStage": "final",
+  "commercialHistory": "not-applicable",
+  "clientDisclosure": "not-applicable",
+  "yearCompleted": null,
+  "clientType": "REPLACE: Optional client type; remove this field for non-client work",
+  "clientName": null,
+  "clientBrief": "REPLACE: Optional approved brief; remove this field when it does not apply",
+  "inspiration": "REPLACE: Optional inspiration that can be disclosed; remove this field when unused",
+  "originalConcept": "REPLACE: Optional description of the original concept; remove this field when unused",
+  "projectSummary": "REPLACE: Two-to-four sentence summary describing the project without unsupported claims.",
+  "projectOverview": "REPLACE: Explain the project context, goals, and development in concise factual language.",
+  "contribution": "REPLACE: Describe what you personally designed, fabricated, painted, programmed, or assembled.",
+  "designRole": [
+    "REPLACE: First design responsibility"
+  ],
+  "fabricationRole": [
+    "REPLACE: First fabrication responsibility"
+  ],
+  "designGoals": [
+    "REPLACE: First design goal"
+  ],
+  "designConstraints": [
+    "REPLACE: First verified constraint"
+  ],
+  "creativeDecisions": [
+    "REPLACE: First documented creative decision"
+  ],
+  "challenges": [
+    "REPLACE: First factual project challenge"
+  ],
+  "solutions": [
+    "REPLACE: How the corresponding challenge was addressed"
+  ],
+  "finalOutcome": "REPLACE: Describe the completed outcome without invented results or measurements.",
+  "software": [
+    "REPLACE: Software used"
+  ],
+  "materials": [
+    "REPLACE: Material used"
+  ],
+  "printers": [
+    "REPLACE: Printer or fabrication machine used"
+  ],
+  "tools": [
+    "REPLACE: Tool used"
+  ],
+  "printMethods": [
+    "REPLACE: Printing method used"
+  ],
+  "fabricationMethods": [
+    "REPLACE: Fabrication method used"
+  ],
+  "finishingMethods": [
+    "REPLACE: Finishing method used"
+  ],
+  "electronics": "REPLACE: Optional electronics description; remove this field when unused",
+  "dimensions": null,
+  "buildTime": "REPLACE: Project duration or build-time range",
+  "processStages": [
+    {
+      "title": "REPLACE: Process stage title",
+      "description": "REPLACE: What happened during this documented stage"
+    }
+  ],
+  "lessonsLearned": "REPLACE: Optional factual reflection; remove this field when unused",
+  "disclosureStatement": "REPLACE: Explain attribution, client privacy, licensed source material, or other relevant disclosure.",
+  "contentWarnings": "REPLACE: Optional content warning; remove this field when unnecessary",
+  "tags": [
+    "REPLACE: Search or grouping tag"
+  ],
+  "credits": [
+    "REPLACE: Accurate project, photography, or collaborator credit"
+  ],
+  "inquiry": {
+    "mode": "general-custom-work",
+    "category": null,
+    "note": "REPLACE: Optional call-to-action context for a related inquiry"
+  },
+  "externalReferences": {
+    "shopifyProduct": null,
+    "etsyArchive": null,
+    "optionalReference": {
+      "url": "https://example.com/replace-this-reference",
+      "label": "REPLACE: External reference label"
+    }
+  },
+  "testimonialReference": null,
+  "model3d": null,
+  "modelPoster": null,
+  "seo": {
+    "title": "REPLACE: SEO title under 70 characters",
+    "description": "REPLACE: SEO description under 200 characters",
+    "image": "/portfolio/replace-project-slug/final/hero-example.webp"
+  },
+  "hero": "final/hero-example.webp",
+  "imageOrder": {
+    "final": [
+      "hero-example.webp",
+      "final-detail-example.webp"
+    ],
+    "working": [
+      "working-example.webp"
+    ],
+    "design": [
+      "design-example.webp"
+    ]
+  },
+  "media": {
+    "final/hero-example.webp": {
+      "alt": "Instructional placeholder labeled Final Hero Example",
+      "caption": "REPLACE: Caption for the strongest completed full-project view.",
+      "credit": "Repository-owned instructional graphic",
+      "permissionStatus": "not-required"
+    },
+    "final/final-detail-example.webp": {
+      "alt": "Instructional placeholder labeled Final Detail Example",
+      "caption": "REPLACE: Caption for an approved completed detail view.",
+      "credit": "Repository-owned instructional graphic",
+      "permissionStatus": "not-required"
+    },
+    "working/working-example.webp": {
+      "alt": "Instructional placeholder labeled Working Image Example",
+      "caption": "REPLACE: Caption explaining the visible fabrication or finishing stage.",
+      "credit": "Repository-owned instructional graphic",
+      "permissionStatus": "not-required"
+    },
+    "design/design-example.webp": {
+      "alt": "Instructional placeholder labeled Design Image Example",
+      "caption": "REPLACE: Caption explaining the visible sketch, CAD view, or render.",
+      "credit": "Repository-owned instructional graphic",
+      "permissionStatus": "not-required"
+    }
+  }
+}

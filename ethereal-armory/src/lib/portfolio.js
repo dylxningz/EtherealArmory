@@ -94,6 +94,10 @@ export class PortfolioValidationError extends Error {
   }
 }
 
+export function isPortfolioAuthoringFolder(value) {
+  return typeof value === "string" && value.startsWith("_");
+}
+
 function isObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }

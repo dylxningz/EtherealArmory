@@ -6,7 +6,7 @@ import PortfolioModelPreview from "../components/PortfolioModelPreview";
 import { ChallengeSolutionList, MediaSection, NarrativeLists, ProcessTimeline, ProjectFacts, ProjectOverview, ProjectRoles } from "../components/PortfolioStory";
 import { ThemeLink as Link } from "../components/ThemeLinks";
 import { getPortfolioRegistry } from "../data/portfolioProjects";
-import { buildInquiryHref, disclosureLabel, getPortfolioProject, labelForPortfolioValue } from "../lib/portfolio";
+import { buildInquiryHref, disclosureLabel, getPortfolioProject, isPortfolioAuthoringFolder, labelForPortfolioValue } from "../lib/portfolio";
 import NotFoundPage from "./NotFoundPage";
 import "./PortfolioPage.css";
 
@@ -55,7 +55,7 @@ export default function PortfolioDetailPage() {
     ];
   })() : [];
 
-  if (!error && !project) return <NotFoundPage />;
+  if (!error && !project) return <NotFoundPage omitShareMetadata={isPortfolioAuthoringFolder(slug)} />;
   if (error) {
     return (
       <main id="main-content" className="portfolio-page section-shell">
