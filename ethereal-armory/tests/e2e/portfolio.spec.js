@@ -21,6 +21,7 @@ async function expectNoMaterialAxeViolations(page) {
 
 test("zero-project Portfolio renders an intentional empty state with no fake cards and complete SEO", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "390px", "Content behavior is viewport-independent.");
+  await useProjects(page, []);
   let externalDataRequests = 0;
   page.on("request", (request) => {
     if (/graphql\.json|judge\.me|judgeme/i.test(request.url())) externalDataRequests += 1;
@@ -34,6 +35,44 @@ test("zero-project Portfolio renders an intentional empty state with no fake car
   await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /Selected custom commissions/);
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://www.etherealarmory.com/portfolio");
   await expect(page.getByRole("link", { name: "Discuss a custom build" }).first()).toBeVisible();
+  expect(externalDataRequests).toBe(0);
+});
+
+test("published Celestial Staff card and detail route include complete metadata and ordered media", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "390px", "Published content behavior is viewport-independent.");
+  let externalDataRequests = 0;
+  page.on("request", (request) => {
+    if (/graphql\.json|judge\.me|judgeme/i.test(request.url())) externalDataRequests += 1;
+  });
+
+  await page.goto("/portfolio");
+  const card = page.locator(".portfolio-card");
+  await expect(card).toHaveCount(1);
+  await expect(card.getByRole("heading", { name: "Celestial Staff" })).toBeVisible();
+  await expect(card.locator("img")).toHaveAttribute("src", /celestial-staff-full-view\.webp$/);
+  await card.getByRole("link", { name: "View Celestial Staff project" }).click();
+
+  await expect(page).toHaveURL(/\/portfolio\/celestial-staff$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Celestial Staff" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Design development" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Fabrication and finish details" })).toBeVisible();
+  const finalSelection = page.getByLabel("Final gallery image selection");
+  await expect(finalSelection.getByRole("button")).toHaveCount(6);
+  const secondFinalImage = finalSelection.getByRole("button").nth(1);
+  await secondFinalImage.click();
+  await expect(secondFinalImage).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: /Open Upper section of the completed Celestial Staff/ }).click();
+  const liveDialog = page.getByRole("dialog", { name: "Final gallery image viewer" });
+  await expect(liveDialog).toBeVisible();
+  await page.keyboard.press("ArrowRight");
+  await expect(liveDialog).toContainText("3 / 6");
+  await page.keyboard.press("Escape");
+  await expect(liveDialog).toBeHidden();
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://www.etherealarmory.com/portfolio/celestial-staff");
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute("content", "https://www.etherealarmory.com/portfolio/celestial-staff/final/celestial-staff-full-view.webp");
+  const structuredData = await page.locator('script[type="application/ld+json"]').allTextContents();
+  expect(structuredData.join("\n")).toContain("Celestial Staff");
+  expect(structuredData.join("\n")).toContain("BreadcrumbList");
   expect(externalDataRequests).toBe(0);
 });
 
@@ -58,7 +97,7 @@ test("PortfolioCard and detail route render a valid local fixture without commer
   await expect(page.getByRole("heading", { name: "What the studio created" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "What the project demonstrated" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Design and fabrication roles" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Working process" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Fabrication and finish details" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Design development" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Process timeline" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Discuss a custom build" })).toHaveAttribute("href", /source=portfolio.*project=example-commission-study/);
@@ -71,7 +110,7 @@ test("project detail omits every unavailable optional section cleanly", async ({
   await useProjects(page, [minimalPortfolioProject]);
   await page.goto(`/portfolio/${minimalPortfolioProject.slug}`);
   await expect(page.getByRole("heading", { level: 1, name: minimalPortfolioProject.title })).toBeVisible();
-  for (const heading of ["Design and fabrication roles", "Design goals", "Working process", "Design development", "Process timeline", "Challenges and solutions", "Three-dimensional model", "Lessons learned", "Have a related idea?"]) {
+  for (const heading of ["Design and fabrication roles", "Design goals", "Fabrication and finish details", "Design development", "Process timeline", "Challenges and solutions", "Three-dimensional model", "Lessons learned", "Have a related idea?"]) {
     await expect(page.getByRole("heading", { name: heading })).toHaveCount(0);
   }
   await expect(page.getByText("N/A", { exact: true })).toHaveCount(0);
@@ -99,7 +138,7 @@ test("gallery selection, announcements, keyboard focus, and lightbox controls ar
 
 test("unknown Portfolio slugs use the existing crawl-safe 404", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "390px", "Unknown-route behavior is viewport-independent.");
-  for (const slug of ["not-a-project", "celestial-staff"]) {
+  for (const slug of ["not-a-project", "missing-commission"]) {
     await page.goto(`/portfolio/${slug}`);
     await expect(page.getByRole("heading", { name: "This artifact cannot be found." })).toBeVisible();
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex,follow");
@@ -108,6 +147,7 @@ test("unknown Portfolio slugs use the existing crawl-safe 404", async ({ page },
 
 test("empty and populated Portfolio routes have no material Axe violations", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "390px", "Axe runs once at a representative mobile width.");
+  await useProjects(page, []);
   await page.goto("/portfolio");
   await expectNoMaterialAxeViolations(page);
   await useProjects(page, [validPortfolioProject]);

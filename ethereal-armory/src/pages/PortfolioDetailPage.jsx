@@ -96,8 +96,8 @@ export default function PortfolioDetailPage() {
       <ProjectOverview project={project} />
       <ProjectRoles project={project} />
       <NarrativeLists project={project} />
-      <MediaSection title="Working process" overline="In progress" media={project.workingImages} />
       <MediaSection title="Design development" overline="Design work" media={project.designImages} />
+      <MediaSection title="Fabrication and finish details" overline="Working views" media={project.workingImages} />
       <MediaSection title="Concept development" overline="Early direction" media={project.conceptArt} />
       <MediaSection title="CAD and modeling" overline="Digital development" media={project.cadImages} />
       <MediaSection title="Renders" overline="Visualization" media={project.renders} />

@@ -738,13 +738,13 @@ test("contact form remains usable without horizontal overflow", async ({ page })
   expect(metrics.documentWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1);
 });
 
-test("portfolio presents an accessible, intentional empty archive without fake projects", async ({ page }, testInfo) => {
+test("portfolio presents the published Celestial Staff project", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "390px", "Content behavior is viewport-independent.");
   await page.goto("/portfolio");
   await expect(page.getByRole("heading", { level: 1, name: "Selected Work" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Project case studies are currently being prepared." })).toBeVisible();
-  await expect(page.getByText(/Celestial Mage Staff/)).toHaveCount(0);
-  await expect(page.locator(".portfolio-card")).toHaveCount(0);
+  await expect(page.locator(".portfolio-card")).toHaveCount(1);
+  await expect(page.locator(".portfolio-card").getByRole("heading", { name: "Celestial Staff" })).toBeVisible();
+  await expect(page.locator(".portfolio-card img")).toHaveAttribute("src", /celestial-staff-full-view\.webp$/);
   const primary = page.getByRole("link", { name: "Discuss a custom build" }).first();
   await expect(primary).toBeVisible();
   const box = await primary.boundingBox();

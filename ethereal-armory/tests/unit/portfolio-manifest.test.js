@@ -43,14 +43,30 @@ function writeProject(root, config = projectContent) {
   return projectRoot;
 }
 
-test("the current Celestial Staff folder fails closed until final media is supplied", () => {
+test("the current Celestial Staff folder publishes its curated media with stable dimensions and ordering", () => {
   const root = path.resolve("public", "portfolio");
   const manifest = buildPortfolioManifest(root);
-  assert.deepEqual(manifest.projects, []);
-  assert.deepEqual(manifest.issues, [{
-    project: "celestial-staff",
-    message: "final/ must contain at least one supported AVIF, JPEG, PNG, or WebP image",
-  }]);
+  assert.deepEqual(manifest.issues, []);
+  assert.equal(manifest.projects.length, 1);
+
+  const [project] = manifest.projects;
+  assert.equal(project.slug, "celestial-staff");
+  assert.equal(project.heroMedia.src, "/portfolio/celestial-staff/final/celestial-staff-full-view.webp");
+  assert.equal(project.heroMedia.width, 1500);
+  assert.equal(project.heroMedia.height, 2000);
+  assert.equal(project.gallery.length, 6);
+  assert.equal(project.designImages.length, 5);
+  assert.equal(project.workingImages.length, 6);
+  assert.deepEqual(project.gallery.map((image) => image.src), [
+    "/portfolio/celestial-staff/final/celestial-staff-full-view.webp",
+    "/portfolio/celestial-staff/final/celestial-staff-upper-blade.webp",
+    "/portfolio/celestial-staff/final/celestial-staff-lower-grip.webp",
+    "/portfolio/celestial-staff/final/celestial-staff-blade-detail.webp",
+    "/portfolio/celestial-staff/final/celestial-staff-ornament-detail.webp",
+    "/portfolio/celestial-staff/final/celestial-staff-components-overview.webp",
+  ]);
+  assert.ok([...project.gallery, ...project.designImages, ...project.workingImages]
+    .every((image) => image.permissionStatus === "confirmed" && image.width > 0 && image.height > 0));
 });
 
 test("a project requires project.json and at least one supported final image", () => withPortfolioRoot((root) => {

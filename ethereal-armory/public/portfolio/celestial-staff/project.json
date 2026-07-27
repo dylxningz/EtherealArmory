@@ -104,5 +104,117 @@
     "title": "Celestial Staff Custom Prop Commission",
     "description": "A Celestial Staff commission designed in Fusion 360, prototyped, fabricated, painted, finished, and shipped by Ethereal Armory."
   },
-  "media": {}
+  "hero": "final/celestial-staff-full-view.webp",
+  "imageOrder": {
+    "final": [
+      "celestial-staff-full-view.webp",
+      "celestial-staff-upper-blade.webp",
+      "celestial-staff-lower-grip.webp",
+      "celestial-staff-blade-detail.webp",
+      "celestial-staff-ornament-detail.webp",
+      "celestial-staff-components-overview.webp"
+    ],
+    "design": [
+      "full-staff-render.webp",
+      "angled-staff-render.webp",
+      "upper-assembly-render.webp",
+      "blade-ornament-render.webp",
+      "lower-grip-render.webp"
+    ],
+    "working": [
+      "bronze-shaft-finish.webp",
+      "silver-blade-finish.webp",
+      "blue-grip-surface.webp",
+      "gold-grip-decoration.webp",
+      "gold-sun-detail.webp",
+      "translucent-blue-tip.webp"
+    ]
+  },
+  "media": {
+    "final/celestial-staff-full-view.webp": {
+      "alt": "A person standing outdoors and holding the completed Celestial Staff upright, showing the full blue, bronze, silver, and gold prop.",
+      "caption": "The completed Celestial Staff at full scale.",
+      "permissionStatus": "confirmed"
+    },
+    "final/celestial-staff-upper-blade.webp": {
+      "alt": "Upper section of the completed Celestial Staff laid on pavement, showing the crescent-shaped silver blade and bronze head.",
+      "caption": "Finished blade, head, and upper shaft.",
+      "permissionStatus": "confirmed"
+    },
+    "final/celestial-staff-lower-grip.webp": {
+      "alt": "Lower section of the completed Celestial Staff laid on pavement, showing blue-and-gold grip decoration and a translucent blue crystal tip.",
+      "caption": "Finished grip decoration and crystal tip.",
+      "permissionStatus": "confirmed"
+    },
+    "final/celestial-staff-blade-detail.webp": {
+      "alt": "Close view of the finished silver blade and bronze head assembly in sunlight.",
+      "caption": "Paint and surface detail on the finished blade assembly.",
+      "permissionStatus": "confirmed"
+    },
+    "final/celestial-staff-ornament-detail.webp": {
+      "alt": "Close view of the small silver-and-blue hanging ornament attached near the staff blade.",
+      "caption": "The finished hanging ornament and attachment.",
+      "permissionStatus": "confirmed"
+    },
+    "final/celestial-staff-components-overview.webp": {
+      "alt": "Finished Celestial Staff components arranged on pavement before final assembly, including the blade head, shaft sections, and decorated lower grip.",
+      "caption": "The finished components before final assembly.",
+      "permissionStatus": "confirmed"
+    },
+    "design/full-staff-render.webp": {
+      "alt": "Fusion 360 render of the complete Celestial Staff angled across a dark blue background.",
+      "caption": "Full-staff design render.",
+      "permissionStatus": "confirmed"
+    },
+    "design/angled-staff-render.webp": {
+      "alt": "Three-quarter Fusion 360 render of the complete staff with a silver blade, bronze shaft, and blue lower grip.",
+      "caption": "An alternate view used to review the full design.",
+      "permissionStatus": "confirmed"
+    },
+    "design/upper-assembly-render.webp": {
+      "alt": "Rear three-quarter Fusion 360 render of the upper blade and shaft connection.",
+      "caption": "Upper assembly and blade connection.",
+      "permissionStatus": "confirmed"
+    },
+    "design/blade-ornament-render.webp": {
+      "alt": "Close Fusion 360 render of the blade, hanging ornament, and upper shaft connection.",
+      "caption": "Blade and ornament design detail.",
+      "permissionStatus": "confirmed"
+    },
+    "design/lower-grip-render.webp": {
+      "alt": "Fusion 360 render of the blue lower grip and dark spherical pommel.",
+      "caption": "Lower grip and pommel design.",
+      "permissionStatus": "confirmed"
+    },
+    "working/bronze-shaft-finish.webp": {
+      "alt": "Bronze-painted cylindrical shaft section held outdoors during finish review.",
+      "caption": "Reviewing the bronze shaft finish.",
+      "permissionStatus": "confirmed"
+    },
+    "working/silver-blade-finish.webp": {
+      "alt": "Silver-painted blade component held outdoors, showing its beveled profile and attachment tabs.",
+      "caption": "Checking the blade finish before assembly.",
+      "permissionStatus": "confirmed"
+    },
+    "working/blue-grip-surface.webp": {
+      "alt": "Close view of the metallic blue grip surface and raised sculpted details before gold accents.",
+      "caption": "The blue grip surface during finishing.",
+      "permissionStatus": "confirmed"
+    },
+    "working/gold-grip-decoration.webp": {
+      "alt": "Blue staff grip with raised gold decoration held outdoors during finishing.",
+      "caption": "Gold details applied to the lower grip.",
+      "permissionStatus": "confirmed"
+    },
+    "working/gold-sun-detail.webp": {
+      "alt": "Close view of the hand-painted gold sun motif on the metallic blue staff grip.",
+      "caption": "Hand-painted sun motif.",
+      "permissionStatus": "confirmed"
+    },
+    "working/translucent-blue-tip.webp": {
+      "alt": "Translucent blue crystal tip held up to sunlight, showing its color and clarity.",
+      "caption": "The translucent tip during finish review.",
+      "permissionStatus": "confirmed"
+    }
+  }
 }
